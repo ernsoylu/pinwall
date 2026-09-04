@@ -121,16 +121,12 @@ export function Creator() {
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 sm:justify-end">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
           <Turnstile
             onToken={setToken}
             onError={(code) => setError(turnstileMessage(code))}
             resetKey={resetKey}
           />
-          {/* interaction-only hides the widget, so say the check happened. */}
-          <span className="font-mono text-[11px] text-fg-faint" aria-live="polite">
-            {token ? "verified" : "verifying…"}
-          </span>
           <Button onClick={submit} disabled={!canSubmit}>
             {busy ? "Creating…" : "Create pin"}
           </Button>
