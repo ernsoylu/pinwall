@@ -64,7 +64,10 @@ func runUpdate(check bool, stdout, stderr io.Writer) int {
 	}
 	if err := replace(dest, binary); err != nil {
 		fmt.Fprintln(stderr, "pw: could not replace", dest+":", err)
-		fmt.Fprintln(stderr, "reinstall: curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/pwsh001 | sh")
+		// Each release mints its own installer URL, so the release page is the
+		// only place that always names the current one.
+		fmt.Fprintln(stderr, "reinstall: the install command is in the latest release notes,")
+		fmt.Fprintln(stderr, "  https://github.com/"+repo+"/releases/latest")
 		return 1
 	}
 	fmt.Fprintf(stdout, "Updated to %s at %s\n", rel.Tag, dest)
