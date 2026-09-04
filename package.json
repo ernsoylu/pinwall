@@ -11,7 +11,10 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "test:cli": "go test ./...",
+    "build:cli": "go build ./cmd/pw",
+    "test:worker": "node --test worker/index.test.js"
   },
   "dependencies": {
     "@shikijs/langs": "^4.4.3",
@@ -27,6 +30,7 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "shiki": "^4.4.3",
+    "supabase": "^2.116.0",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
@@ -44,6 +48,7 @@
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.129.0"
   }
 }
