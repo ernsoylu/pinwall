@@ -32,6 +32,9 @@ export function CodeEditor({
   const [preview, setPreview] = useState(false);
   const back = useRef<HTMLDivElement>(null);
   const front = useRef<HTMLTextAreaElement>(null);
+  // Escape releases the next Tab to the browser, so keyboard users are never
+  // trapped in the textarea by the indent handler below.
+  const releaseTab = useRef(false);
 
   const isMarkdown = language === "markdown";
   // Switching the language away from markdown drops the preview on its own.
@@ -81,7 +84,19 @@ export function CodeEditor({
             ref={front}
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            onScroll={() => {
+            onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            releaseTab.current = true;
+            return;
+          }
+          if (e.key === "Tab" && !releaseTab.current) {
+            e.preventDefault();
+            indent(e.currentTarget, e.shiftKey, onChange);
+            return;
+          }
+          releaseTab.current = false;
+        }}
+        onScroll={() => {
               if (!back.current || !front.current) return;
               back.current.scrollTop = front.current.scrollTop;
               back.current.scrollLeft = front.current.scrollLeft;
@@ -122,4 +137,42 @@ function Tab({
       {children}
     </button>
   );
+}
+
+const INDENT = "  ";
+
+/**
+ * Tab indents instead of moving focus. Edits go through execCommand where it
+ * exists so the browser's own undo stack survives — rewriting value through
+ * React would make Ctrl+Z throw away the whole pin.
+ */
+function indent(el: HTMLTextAreaElement, outdent: boolean, onChange: (v: string) => void) {
+  const { selectionStart: start, selectionEnd: end, value } = el;
+
+  const apply = (from: number, to: number, text: string, caret: [number, number]) => {
+    el.setSelectionRange(from, to);
+    let ok = false;
+    try {
+      ok = document.execCommand("insertText", false, text);
+    } catch {
+      ok = false;
+    }
+    if (!ok) onChange(value.slice(0, from) + text + value.slice(to));
+    el.setSelectionRange(...caret);
+  };
+
+  // A caret, or a selection inside one line: just drop an indent in.
+  if (!outdent && !value.slice(start, end).includes("\n")) {
+    apply(start, end, INDENT, [start + INDENT.length, start + INDENT.length]);
+    return;
+  }
+
+  // Otherwise rewrite every line the selection touches, so a block keeps its shape.
+  const from = value.lastIndexOf("\n", start - 1) + 1;
+  const nextBreak = value.indexOf("\n", end);
+  const to = nextBreak === -1 ? value.length : nextBreak;
+  const block = value.slice(from, to);
+  const text = outdent ? block.replace(/^ {1,2}/gm, "") : block.replace(/^/gm, INDENT);
+
+  apply(from, to, text, [from, from + text.length]);
 }

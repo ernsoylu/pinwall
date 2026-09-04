@@ -27,6 +27,21 @@ on a permanently disabled submit button:
 `src/components/Turnstile.tsx` sidesteps it by removing the widget and rendering
 a fresh one whenever `resetKey` changes. Keep that shape.
 
+## The editor's Tab handler has two load-bearing details
+
+`src/components/CodeEditor.tsx` intercepts Tab so it indents instead of moving
+focus. Two things there are not incidental:
+
+- **Escape releases the next Tab.** Without it the textarea is a keyboard trap:
+  a keyboard-only visitor who tabs in can never tab out.
+- **Edits go through `document.execCommand("insertText")`.** It is deprecated,
+  but it is the only way to indent a textarea while keeping the browser's own
+  undo stack. Writing the value back through React instead makes Ctrl+Z discard
+  the entire pin in one step. The React path is only a fallback for where
+  execCommand is unavailable.
+
+`src/components/CodeEditor.test.tsx` covers both.
+
 ## Deliberately skipped
 
 - **Shiki inside rendered markdown.** Fenced code blocks in a rendered markdown

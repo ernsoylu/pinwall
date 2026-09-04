@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { ShieldAlert } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 type TurnstileApi = {
   render: (el: HTMLElement, opts: Record<string, unknown>) => string;
@@ -41,6 +42,11 @@ type Props = {
 
 export function Turnstile({ onToken, onError, resetKey = 0 }: Props) {
   const host = useRef<HTMLDivElement>(null);
+  const [challenging, setChallenging] = useState(false);
+  // Tracked against resetKey so a fresh widget is unsolved without an effect
+  // writing state during render.
+  const [solvedFor, setSolvedFor] = useState<number | null>(null);
+  const solved = solvedFor === resetKey;
   // Keep the latest callbacks without re-rendering the widget on every parent render.
   const cb = useRef({ onToken, onError });
   useEffect(() => {
@@ -54,6 +60,8 @@ export function Turnstile({ onToken, onError, resetKey = 0 }: Props) {
     // Cloudflare only reports the failure inside its own widget, so surface the
     // code — without it a bad sitekey looks like a permanently disabled button.
     const fail = (code: string) => {
+      setChallenging(false);
+      setSolvedFor(null);
       cb.current.onToken(null);
       cb.current.onError?.(code);
     };
@@ -76,8 +84,18 @@ export function Turnstile({ onToken, onError, resetKey = 0 }: Props) {
           // interaction-only working on a retry:
           // https://community.cloudflare.com/t/579897
           appearance: "interaction-only",
-          callback: (token: string) => cb.current.onToken(token),
-          "expired-callback": () => cb.current.onToken(null),
+          // The only cue that Cloudflare is about to put a visible box on the
+          // page. Without it there is no way to frame the widget as ours.
+          "before-interactive-callback": () => setChallenging(true),
+          callback: (token: string) => {
+            setChallenging(false);
+            setSolvedFor(resetKey);
+            cb.current.onToken(token);
+          },
+          "expired-callback": () => {
+            setSolvedFor(null);
+            cb.current.onToken(null);
+          },
           "error-callback": (code: string) => fail(code),
         });
       })
@@ -90,5 +108,26 @@ export function Turnstile({ onToken, onError, resetKey = 0 }: Props) {
     };
   }, [resetKey]);
 
-  return <div ref={host} data-testid="turnstile" />;
+  // The host element never moves — only the framing around it changes — because
+  // relocating it in the tree would tear Cloudflare's widget out of the DOM.
+  return (
+    <div
+      className={
+        challenging
+          ? "flex w-full items-center gap-2.5 rounded-md border border-warn/40 bg-surface px-3 py-2"
+          : "flex items-center gap-2"
+      }
+    >
+      <ShieldAlert className={challenging ? "size-4 shrink-0 text-warn" : "hidden"} />
+      <span
+        aria-live="polite"
+        className={
+          challenging ? "text-[13px] text-fg-muted" : "font-mono text-[11px] text-fg-faint"
+        }
+      >
+        {challenging ? "One quick check first" : solved ? "verified" : "verifying…"}
+      </span>
+      <div ref={host} data-testid="turnstile" />
+    </div>
+  );
 }
