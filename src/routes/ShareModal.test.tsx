@@ -3,7 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ShareModal } from "./ShareModal";
 
-const props = { id: "abc1234", editToken: "tok-123", isPrivate: true, onClose: vi.fn() };
+const props = {
+  id: "abc1234",
+  editToken: "tok-123",
+  isPrivate: true,
+  language: "typescript",
+  onClose: vi.fn(),
+};
 
 describe("ShareModal", () => {
   it("puts the edit token in the fragment only, never the share link", () => {
@@ -46,5 +52,13 @@ describe("ShareModal", () => {
 
     render(<ShareModal {...props} isPrivate />);
     expect(screen.getByText(/never saw your text/i)).toBeInTheDocument();
+  });
+  it("offers a rendered link for markdown pins only", () => {
+    const { unmount } = render(<ShareModal {...props} />);
+    expect(screen.queryByText(/\?view=rendered/)).not.toBeInTheDocument();
+    unmount();
+
+    render(<ShareModal {...props} language="markdown" />);
+    expect(screen.getByText(`${location.origin}/abc1234?view=rendered`)).toBeInTheDocument();
   });
 });

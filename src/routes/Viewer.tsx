@@ -1,8 +1,9 @@
-import { FileText, LockKeyhole } from "lucide-react";
+import { Code2, Eye, FileText, LockKeyhole } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { CodeBlock } from "../components/CodeBlock";
 import { CodeEditor } from "../components/CodeEditor";
+import { Markdown } from "../components/Markdown";
 import { CopyButton } from "../components/CopyButton";
 import { Shell } from "../components/Shell";
 import { getPin, updatePin, type Pin } from "../lib/api";
@@ -56,7 +57,11 @@ function Ready({
   onText: (text: string) => void;
 }) {
   const { pin, text, passphrase } = state;
+  const isMarkdown = pin.language === "markdown";
   const [editing, setEditing] = useState(false);
+  const [rendered, setRendered] = useState(
+    () => isMarkdown && new URLSearchParams(location.search).get("view") === "rendered",
+  );
   const [draft, setDraft] = useState(text);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,12 +82,37 @@ function Ready({
     }
   }
 
+  // Keep the address bar in step so the toggle produces a link worth copying.
+  useEffect(() => {
+    if (!isMarkdown) return;
+    const url = new URL(location.href);
+    if (rendered) url.searchParams.set("view", "rendered");
+    else url.searchParams.delete("view");
+    history.replaceState(null, "", url);
+  }, [isMarkdown, rendered]);
+
   return (
     <Shell
       actions={
         <>
           {!editing && (
             <>
+              {isMarkdown && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={rendered ? "Show markdown source" : "Render markdown"}
+                  title={rendered ? "Source" : "Rendered"}
+                  aria-pressed={rendered}
+                  onClick={() => setRendered((v) => !v)}
+                >
+                  {rendered ? (
+                    <Code2 className="size-[15px] text-fg-muted" />
+                  ) : (
+                    <Eye className="size-[15px] text-fg-muted" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -154,7 +184,11 @@ function Ready({
           />
         ) : (
           <div className="min-h-0 flex-1 overflow-auto">
-            <CodeBlock code={text} language={pin.language} />
+            {rendered ? (
+              <Markdown source={text} />
+            ) : (
+              <CodeBlock code={text} language={pin.language} />
+            )}
           </div>
         )}
       </div>

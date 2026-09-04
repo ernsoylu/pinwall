@@ -110,4 +110,51 @@ describe("Viewer", () => {
     render(<Viewer id="nope99" editToken={null} />);
     expect(await screen.findByText("No pin at /nope99.")).toBeInTheDocument();
   });
+  it("renders markdown only on request, and puts that view in the URL", async () => {
+    getPin.mockResolvedValue({
+      ...basePin,
+      language: "markdown",
+      content: "# Heading",
+      ciphertext: null,
+      iv: null,
+    });
+
+    render(<Viewer id="abc1234" editToken={null} />);
+
+    // Source first: the plain share link keeps showing the markdown as written.
+    expect(await screen.findByText("# Heading")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Render markdown" }));
+
+    expect(await screen.findByRole("heading", { name: "Heading" })).toBeInTheDocument();
+    expect(location.search).toBe("?view=rendered");
+
+    await userEvent.click(screen.getByRole("button", { name: "Show markdown source" }));
+    expect(location.search).toBe("");
+  });
+
+  it("opens straight into the rendered view for a ?view=rendered link", async () => {
+    history.replaceState(null, "", "/abc1234?view=rendered");
+    getPin.mockResolvedValue({
+      ...basePin,
+      language: "markdown",
+      content: "# Heading",
+      ciphertext: null,
+      iv: null,
+    });
+
+    render(<Viewer id="abc1234" editToken={null} />);
+
+    expect(await screen.findByRole("heading", { name: "Heading" })).toBeInTheDocument();
+    history.replaceState(null, "", "/");
+  });
+
+  it("offers no render toggle for a non-markdown pin", async () => {
+    getPin.mockResolvedValue({ ...basePin, content: "plain", ciphertext: null, iv: null });
+
+    render(<Viewer id="abc1234" editToken={null} />);
+
+    expect(await screen.findByText("plain")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Render markdown" })).not.toBeInTheDocument();
+  });
 });

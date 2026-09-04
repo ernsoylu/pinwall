@@ -127,6 +127,10 @@ export function Creator() {
             onError={(code) => setError(turnstileMessage(code))}
             resetKey={resetKey}
           />
+          {/* interaction-only hides the widget, so say the check happened. */}
+          <span className="font-mono text-[11px] text-fg-faint" aria-live="polite">
+            {token ? "verified" : "verifying…"}
+          </span>
           <Button onClick={submit} disabled={!canSubmit}>
             {busy ? "Creating…" : "Create pin"}
           </Button>
@@ -138,6 +142,7 @@ export function Creator() {
           id={created.id}
           editToken={created.edit_token}
           isPrivate={isPrivate}
+          language={language}
           onClose={() => setCreated(null)}
         />
       )}
