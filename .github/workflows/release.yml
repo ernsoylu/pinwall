@@ -16,6 +16,29 @@ jobs:
           go-version: "1.22"
           cache: false
       - run: go test ./...
+      - name: Check the installer mirror can be kept in sync
+        env:
+          INSTALL_EDIT_URL: ${{ secrets.PINWALL_INSTALL_EDIT_URL }}
+        run: |
+          # Runs before anything is published. Without the edit token the mirror
+          # at /r/pwsh001 cannot be updated, so a changed install.sh would leave
+          # `curl … | sh` installing against the previous release — and learning
+          # that after GoReleaser has pushed artifacts is far too late.
+          if [ -n "$INSTALL_EDIT_URL" ]; then
+            echo "Edit token present; the mirror is updated after publishing."
+            exit 0
+          fi
+          live=$(mktemp)
+          if ! curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/pwsh001 -o "$live"; then
+            echo "::error title=Installer mirror unreachable::Could not fetch https://pw.pee.pw/r/pwsh001 to check it."
+            exit 1
+          fi
+          if cmp -s "$live" install.sh; then
+            echo "No edit token, but the mirror already matches install.sh; nothing to update."
+            exit 0
+          fi
+          echo "::error title=Installer mirror is stale::install.sh differs from https://pw.pee.pw/r/pwsh001 and PINWALL_INSTALL_EDIT_URL is not set, so this release would ship the previous version's installer. See 'Installer mirror' in README.md."
+          exit 1
       - uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
         with:
           version: "~> v2"
@@ -26,7 +49,9 @@ jobs:
         env:
           INSTALL_EDIT_URL: ${{ secrets.PINWALL_INSTALL_EDIT_URL }}
         run: |
-          if [ -n "$INSTALL_EDIT_URL" ]; then
-            go run ./cmd/pw amend "$INSTALL_EDIT_URL" < install.sh
+          if [ -z "$INSTALL_EDIT_URL" ]; then
+            echo "No edit token; the pre-flight check already confirmed the mirror matches."
+            exit 0
           fi
+          go run ./cmd/pw amend "$INSTALL_EDIT_URL" < install.sh
           curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/pwsh001 | cmp - install.sh
