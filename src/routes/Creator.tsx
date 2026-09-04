@@ -13,6 +13,7 @@ import { dateStamp } from "../lib/time";
 export function Creator() {
   const [body, setBody] = useState("");
   const [language, setLanguage] = useState("typescript");
+  const [expiry, setExpiry] = useState("");
   const [isPrivate, setPrivate] = useState(false);
   const [passphrase, setPassphrase] = useState("");
   const [token, setToken] = useState<string | null>(null);
@@ -30,7 +31,14 @@ export function Creator() {
       const payload = isPrivate
         ? await encrypt(body, passphrase)
         : { content: body };
-      setCreated(await createPin({ ...payload, language, turnstileToken: token! }));
+      setCreated(
+        await createPin({
+          ...payload,
+          language,
+          turnstileToken: token!,
+          expires_at: expiry ? new Date(`${expiry}T23:59:59.999`).toISOString() : null,
+        }),
+      );
     } catch (e) {
       setError(messageFor((e as Error).message));
       setToken(null);
@@ -57,7 +65,16 @@ export function Creator() {
           <LabelGrid
             tag={<span className="text-ink-faint">not issued</span>}
             deposited={dateStamp()}
-            keepUntil="no limit"
+            keepUntil={
+              <input
+                type="date"
+                aria-label="Keep until"
+                min={new Date().toLocaleDateString("en-CA")}
+                value={expiry}
+                onChange={(e) => setExpiry(e.target.value)}
+                className="w-[9.5rem] cursor-pointer bg-transparent text-ink-muted outline-none"
+              />
+            }
             seal={
               isPrivate ? (
                 <span className="stamp -my-0.5 inline-block rounded-[2px] border border-oxblood px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-oxblood">

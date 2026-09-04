@@ -206,7 +206,7 @@ function Ready({
               </span>
             }
             deposited={dateStamp(pin.created_at)}
-            keepUntil="no limit"
+            keepUntil={pin.expires_at ? dateStamp(pin.expires_at) : "no limit"}
             seal={
               passphrase ? (
                 <span className="text-oxblood">unsealed here</span>
