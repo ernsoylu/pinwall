@@ -64,6 +64,9 @@ Built and confirmed:
 - Markdown pins render, sanitised through DOMPurify before any HTML is injected.
 - Editing via the fragment token, for both public and private pins.
 - Copy, raw view, and QR code on share.
+- Optional expiry: `expires_at` hides a pin from every read path, and
+  `purge_expired_pins()` deletes it — swept on each create, the way the CLI rate
+  limiter sweeps its own table. "Kept until" means deleted, not merely hidden.
 - Bot protection via Cloudflare Turnstile in `interaction-only` mode.
 - Hard limits: pin content ≤ 256 KB (DB constraint); ids are 5–7 characters
   matching `^[A-Za-z0-9_-]{5,7}$`.
@@ -80,12 +83,8 @@ Constraints future work must respect:
   `attention.md`.
 - The Turnstile secret is a Supabase function secret and never enters this repo;
   a test secret must never be set on the deployed project.
-
-Intended but not built:
-
-- **Expiry.** Pins currently live until the database is wiped: the schema has no
-  TTL and no delete path. Expiry is planned. Until it ships, the interface must
-  not imply pins are temporary.
+- **The app's security headers are load-bearing, not decoration.** The CSP in
+  `worker/index.js` is the second layer behind DOMPurify. See `attention.md`.
 
 Not decided: whether the edit token should also authorize deletion.
 
@@ -109,7 +108,7 @@ Not decided: whether the edit token should also authorize deletion.
 - The live deployment at https://pw.pee.pw and the whole source tree, which is
   the proof for every privacy claim above.
 - `README.md` (privacy mechanics, dev/prod Turnstile key split) and
-  `attention.md` (the three load-bearing invariants).
+  `attention.md` (the four load-bearing invariants).
 - `supabase/migrations/20260904063325_pins.sql` — grants, RLS, and the
   token-gated update RPC; the checkable form of the positioning claim.
 - Screenshots: `creator-write.png`, `turnstile-state.png`. `design.pen` exists

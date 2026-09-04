@@ -16,6 +16,22 @@ read a private pin the viewer just unlocked.
 `src/lib/markdown.test.ts` pins the behaviour for script tags, inline event
 handlers, `javascript:` URLs and HTML written as markdown text. Keep it green.
 
+## The CSP is the second layer under that, and it is narrow on purpose
+
+`worker/index.js` sets a Content-Security-Policy on every asset response, so a
+sanitiser bypass still cannot fetch a script or exfiltrate a decrypted pin.
+Three allowances there are load-bearing and easy to delete by accident:
+
+- `script-src` and `frame-src` admit `challenges.cloudflare.com`. Turnstile is a
+  script plus an iframe; drop either and creation dies.
+- `style-src` needs `'unsafe-inline'`. Shiki colours every token with a `style`
+  attribute, so removing it unstyles the editor and both code views.
+- `connect-src` needs `https://*.supabase.co`. Every read and create goes there.
+
+`worker/index.test.js` asserts the directives that matter. If you add a CDN,
+font host, or analytics beacon, the CSP is the thing that will refuse it — that
+refusal is the feature, so widen it deliberately or not at all.
+
 ## Never call `turnstile.reset()`
 
 The widget renders with `appearance: "interaction-only"` so it stays out of the

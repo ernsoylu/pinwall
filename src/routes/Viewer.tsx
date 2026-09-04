@@ -157,8 +157,14 @@ function Ready({
                 aria-label="Raw"
                 title="Raw"
                 onClick={() => {
-                  const blob = new Blob([text], { type: "text/plain" });
-                  window.open(URL.createObjectURL(blob), "_blank");
+                  const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+                  window.open(url, "_blank");
+                  // For an unsealed pin this URL holds the decrypted text, so it
+                  // must not live as long as the document.
+                  // ponytail: fixed delay because the new tab gives no signal it
+                  // has claimed the blob; a load event would need a same-origin
+                  // handle back.
+                  setTimeout(() => URL.revokeObjectURL(url), 60_000);
                 }}
               >
                 <FileText className="size-[15px]" />
