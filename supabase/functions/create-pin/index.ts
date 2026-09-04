@@ -1,12 +1,19 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const cors = {
+// supabase-js sends x-client-info and x-supabase-api-version alongside the auth
+// headers. Reflecting the requested list avoids the browser rejecting a preflight
+// over a header we forgot to name, which fails before the POST is ever sent.
+const corsFor = (req: Request) => ({
   "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
-  "Access-Control-Allow-Headers": "content-type, apikey, authorization",
+  "Access-Control-Allow-Headers":
+    req.headers.get("access-control-request-headers") ??
+    "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+  "Access-Control-Max-Age": "86400",
+  Vary: "Origin, Access-Control-Request-Headers",
+});
 
-const json = (body: unknown, status = 200) =>
+const jsonWith = (cors: Record<string, string>) => (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...cors, "content-type": "application/json" },
@@ -17,7 +24,10 @@ const ID = /^[A-Za-z0-9_-]{5,7}$/;
 const LANG = /^[a-z0-9+#.-]{1,32}$/;
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: cors });
+  const cors = corsFor(req);
+  const json = jsonWith(cors);
+
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   let body: Record<string, unknown>;
