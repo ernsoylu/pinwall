@@ -1,0 +1,23 @@
+version: 2
+project_name: pw
+
+builds:
+  - main: ./cmd/pw
+    binary: pw
+    env: [CGO_ENABLED=0]
+    ldflags: [-s -w -X main.version={{.Version}}]
+    goos: [linux, darwin, windows, freebsd]
+    goarch: [amd64, arm64]
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files: [LICENSE, install.sh]
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: git

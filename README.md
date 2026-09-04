@@ -2,6 +2,33 @@
 
 Fast, anonymous, zero-knowledge text and code sharing. Live at **https://pw.pee.pw**.
 
+## CLI
+
+```sh
+curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/pwsh001 | sh
+```
+
+```sh
+printf 'hello\n' | pw write
+cat deploy.sh | pw write --language shell --edit-url
+pw TAG
+pw TAG --pass XXXXXXXXXXXXXXXX
+pw TAG | sh
+printf 'replacement\n' | pw amend 'TAG#EDIT_TOKEN'
+pw update
+```
+
+`pw` keeps diagnostics on stderr, so stdout can be piped safely. `--pass` encrypts writes and
+decrypts reads locally using the browser-compatible format. Command arguments may be visible in
+shell history and process listings.
+
+The installer mirror is bootstrapped once after the API deploy, then its edit URL is saved as the
+`PINWALL_INSTALL_EDIT_URL` GitHub Actions secret:
+
+```sh
+go run ./cmd/pw write --tag pwsh001 --edit-url < install.sh
+```
+
 ## How the privacy works
 
 - **Private pins** are encrypted in the browser with PBKDF2 (310k iterations, SHA-256) + AES-GCM.
@@ -75,4 +102,9 @@ production entirely.
 ## Backend
 
 `supabase/migrations` holds the schema and the `update_pin_content` RPC.
-`supabase/functions/create-pin` is the Turnstile-gated insert.
+`supabase/functions/create-pin` is the Turnstile-gated browser insert;
+`create-pin-cli` is the rate-limited CLI insert, and `pin` serves CLI reads and amendments.
+
+Production deployment also needs repository variables `SUPABASE_PROJECT_REF` and
+`SUPABASE_FUNCTIONS_URL`, plus secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
+`EDGE_PROXY_SECRET`, `RATE_LIMIT_SALT`, `CLOUDFLARE_API_TOKEN`, and `CLOUDFLARE_ACCOUNT_ID`.

@@ -1,0 +1,31 @@
+name: Release pw
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.22"
+          cache: false
+      - run: go test ./...
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Mirror installer to its stable Pinwall tag
+        env:
+          INSTALL_EDIT_URL: ${{ secrets.PINWALL_INSTALL_EDIT_URL }}
+        run: |
+          test -n "$INSTALL_EDIT_URL"
+          go run ./cmd/pw amend "$INSTALL_EDIT_URL" < install.sh
+          curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/pwsh001 | cmp - install.sh
