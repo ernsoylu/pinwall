@@ -1,4 +1,4 @@
-import { Code2, KeyRound } from "lucide-react";
+import { CalendarDays, Code2, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../components/Button";
 import { CodeEditor } from "../components/CodeEditor";
@@ -66,22 +66,16 @@ export function Creator() {
             tag={<span className="text-ink-faint">not issued</span>}
             deposited={dateStamp()}
             keepUntil={
-              <span className="relative inline-flex">
-                {!expiry && (
-                  <span className="pointer-events-none absolute left-0 text-ink-muted">
-                    infinite
-                  </span>
-                )}
+              <span className="relative inline-flex cursor-pointer items-center gap-1 text-ink-muted">
+                <span>{expiry ? dateStamp(expiry + "T12:00:00") : "infinite"}</span>
+                <CalendarDays className="size-3 text-ink-faint" aria-hidden />
                 <input
                   type="date"
                   aria-label="Keep until"
                   min={new Date().toLocaleDateString("en-CA")}
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
-                  className={
-                    "w-[7.25rem] min-w-0 cursor-pointer bg-transparent outline-none " +
-                    (expiry ? "text-ink-muted" : "text-transparent")
-                  }
+                  className="absolute inset-0 size-full cursor-pointer opacity-0"
                 />
               </span>
             }
