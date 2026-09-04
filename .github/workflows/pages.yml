@@ -13,16 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: 22
           cache: npm
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
           go-version: "1.22"
           cache: false
-      - uses: denoland/setup-deno@v2
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
         with:
           deno-version: v2.x
       - run: npm ci
@@ -43,12 +43,12 @@ jobs:
           EDGE_PROXY_SECRET: ${{ secrets.EDGE_PROXY_SECRET }}
           RATE_LIMIT_SALT: ${{ secrets.RATE_LIMIT_SALT }}
         run: |
-          npx supabase link --project-ref "$PROJECT_REF"
-          npx supabase secrets set EDGE_PROXY_SECRET="$EDGE_PROXY_SECRET" RATE_LIMIT_SALT="$RATE_LIMIT_SALT" --project-ref "$PROJECT_REF"
-          npx supabase db push --linked
-          npx supabase functions deploy create-pin --project-ref "$PROJECT_REF" --no-verify-jwt
-          npx supabase functions deploy create-pin-cli --project-ref "$PROJECT_REF" --no-verify-jwt
-          npx supabase functions deploy pin --project-ref "$PROJECT_REF" --no-verify-jwt
+          ./node_modules/.bin/supabase link --project-ref "$PROJECT_REF"
+          ./node_modules/.bin/supabase secrets set EDGE_PROXY_SECRET="$EDGE_PROXY_SECRET" RATE_LIMIT_SALT="$RATE_LIMIT_SALT" --project-ref "$PROJECT_REF"
+          ./node_modules/.bin/supabase db push --linked
+          ./node_modules/.bin/supabase functions deploy create-pin --project-ref "$PROJECT_REF" --no-verify-jwt
+          ./node_modules/.bin/supabase functions deploy create-pin-cli --project-ref "$PROJECT_REF" --no-verify-jwt
+          ./node_modules/.bin/supabase functions deploy pin --project-ref "$PROJECT_REF" --no-verify-jwt
       - name: Deploy site and API Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -56,5 +56,5 @@ jobs:
           SUPABASE_FUNCTIONS_URL: ${{ vars.SUPABASE_FUNCTIONS_URL }}
           EDGE_PROXY_SECRET: ${{ secrets.EDGE_PROXY_SECRET }}
         run: |
-          printf '%s' "$EDGE_PROXY_SECRET" | npx wrangler secret put EDGE_PROXY_SECRET
-          npx wrangler deploy --var "SUPABASE_FUNCTIONS_URL:$SUPABASE_FUNCTIONS_URL"
+          printf '%s' "$EDGE_PROXY_SECRET" | ./node_modules/.bin/wrangler secret put EDGE_PROXY_SECRET
+          ./node_modules/.bin/wrangler deploy --var "SUPABASE_FUNCTIONS_URL:$SUPABASE_FUNCTIONS_URL"
