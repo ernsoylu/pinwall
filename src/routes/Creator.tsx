@@ -122,7 +122,11 @@ export function Creator() {
         </div>
 
         <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <Turnstile onToken={setToken} resetKey={resetKey} />
+          <Turnstile
+            onToken={setToken}
+            onError={(code) => setError(turnstileMessage(code))}
+            resetKey={resetKey}
+          />
           <Button onClick={submit} disabled={!canSubmit}>
             {busy ? "Creating…" : "Create pin"}
           </Button>
@@ -145,6 +149,8 @@ function messageFor(code: string) {
   switch (code) {
     case "turnstile_failed":
       return "Verification failed. Try again.";
+    case "turnstile_misconfigured":
+      return "Verification is unavailable (server key misconfigured).";
     case "id_taken":
       return "Could not find a free short link. Try again.";
     case "too_large":
@@ -152,4 +158,13 @@ function messageFor(code: string) {
     default:
       return "Could not create the pin. Try again.";
   }
+}
+
+// Codes Cloudflare marks non-retryable: the site is misconfigured, not the visitor.
+const FATAL = ["missing_sitekey", "400020", "400070", "110100", "110110", "110200"];
+
+function turnstileMessage(code: string) {
+  return FATAL.includes(code)
+    ? `Verification is unavailable (Turnstile ${code}). This is a site misconfiguration.`
+    : `Verification failed (${code}). Try again.`;
 }

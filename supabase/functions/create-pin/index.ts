@@ -63,7 +63,13 @@ Deno.serve(async (req) => {
     },
   );
   const outcome = await verify.json();
-  if (!outcome.success) return json({ error: "turnstile_failed" }, 403);
+  if (!outcome.success) {
+    // A missing or wrong secret is our bug, not a failed challenge — saying so
+    // here saves debugging a misconfiguration that looks like a bot rejection.
+    const codes: string[] = outcome["error-codes"] ?? [];
+    const ours = codes.some((c) => c.includes("secret"));
+    return json({ error: ours ? "turnstile_misconfigured" : "turnstile_failed", codes }, ours ? 500 : 403);
+  }
 
   const edit_token = crypto.randomUUID();
   const db = createClient(
