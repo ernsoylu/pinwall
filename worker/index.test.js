@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import worker from "./index.js";
+import worker, { SECURITY_HEADERS } from "./index.js";
+import { readFileSync } from "node:fs";
 
 test("/r/TAG returns exact public content", async () => {
   const original = globalThis.fetch;
@@ -88,4 +89,22 @@ test("raw endpoint preserves upstream failure status", async () => {
   try {
     assert.equal((await worker.fetch(new Request("https://pw.pee.pw/r/abc1234"), {})).status, 404);
   } finally { globalThis.fetch = original; }
+});
+
+test("public/_headers carries the same policy the Worker does", () => {
+  // The Worker only runs for /api/* and /r/*, so _headers is what every real
+  // page load actually gets. Two copies, one policy: they must not drift.
+  const file = readFileSync(new URL("../public/_headers", import.meta.url), "utf8");
+  const rules = Object.fromEntries(
+    file.split("\n")
+      .filter((line) => /^\s+\S+:/.test(line))
+      .map((line) => {
+        const at = line.indexOf(":");
+        return [line.slice(0, at).trim().toLowerCase(), line.slice(at + 1).trim()];
+      }),
+  );
+  assert.ok(file.includes("/*"), "_headers must apply to every path");
+  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+    assert.equal(rules[name], value, `${name} differs between worker/index.js and public/_headers`);
+  }
 });
