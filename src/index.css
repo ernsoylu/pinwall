@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0c0e;
+  --color-surface: #131519;
+  --color-surface-2: #1a1d22;
+  --color-line: #272b33;
+  --color-fg: #e8eaed;
+  --color-fg-muted: #8b929c;
+  --color-fg-faint: #5a616b;
+  --color-accent: #ff5c38;
+  --color-accent-fg: #120704;
+  --color-success: #3dd68c;
+  --color-warn: #f5c451;
+
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-bg text-fg font-sans antialiased;
+}
+
+/* Shiki emits inline styles on <pre>; keep our own surface behind it. */
+.shiki {
+  background-color: transparent !important;
+}
