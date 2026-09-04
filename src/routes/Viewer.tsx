@@ -2,6 +2,7 @@ import { FileText, LockKeyhole } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { CodeBlock } from "../components/CodeBlock";
+import { CodeEditor } from "../components/CodeEditor";
 import { CopyButton } from "../components/CopyButton";
 import { Shell } from "../components/Shell";
 import { getPin, updatePin, type Pin } from "../lib/api";
@@ -145,12 +146,11 @@ function Ready({
         </div>
 
         {editing ? (
-          <textarea
+          <CodeEditor
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            spellCheck={false}
-            aria-label="Edit pin content"
-            className="min-h-0 flex-1 resize-none bg-transparent p-3.5 font-mono text-[13px]/[1.55] outline-none"
+            onChange={setDraft}
+            language={pin.language}
+            label="Edit pin content"
           />
         ) : (
           <div className="min-h-0 flex-1 overflow-auto">

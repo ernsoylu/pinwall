@@ -1,6 +1,7 @@
 import { Code, KeyRound, Lock, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../components/Button";
+import { CodeEditor } from "../components/CodeEditor";
 import { Shell } from "../components/Shell";
 import { Turnstile } from "../components/Turnstile";
 import { ShareModal } from "./ShareModal";
@@ -52,13 +53,12 @@ export function Creator() {
           <span className="font-mono text-xs text-fg-muted">untitled</span>
           <span className="font-mono text-xs text-fg-faint">{body.length} chars</span>
         </div>
-        <textarea
+        <CodeEditor
           value={body}
-          onChange={(e) => setBody(e.target.value)}
-          spellCheck={false}
-          aria-label="Pin content"
+          onChange={setBody}
+          language={language}
+          label="Pin content"
           placeholder="Paste or type here…"
-          className="min-h-0 flex-1 resize-none bg-transparent p-3.5 font-mono text-[13px]/[1.55] text-fg-muted outline-none placeholder:text-fg-faint"
         />
       </div>
 
@@ -76,7 +76,7 @@ export function Creator() {
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="bg-transparent font-medium outline-none"
+              className="picker bg-transparent font-mono text-[13px] font-medium outline-none"
             >
               {LANGUAGES.map((l) => (
                 <option key={l} value={l} className="bg-surface">
