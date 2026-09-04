@@ -326,7 +326,7 @@ func amendPin(target string, content []byte, o options, stdout, stderr io.Writer
 }
 
 func printCreated(p pin, o options, out io.Writer) int {
-	share := defaultBase + "/" + p.ID
+	share := baseURL() + "/" + p.ID
 	edit := share + "#" + p.EditToken
 	if o.json {
 		_ = json.NewEncoder(out).Encode(map[string]string{"tag": p.ID, "url": share, "edit_url": edit})
@@ -363,15 +363,24 @@ func apiFailure(res *http.Response, stderr io.Writer) int {
 	return 1
 }
 
+// Rejection sampling: 256 is not a multiple of 62, so a plain modulo would make
+// the first eight letters of the alphabet a quarter likelier than the rest.
 func newID() (string, error) {
-	b := make([]byte, 7)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
+	const limit = 256 - 256%len(alphabet)
+	id := make([]byte, 7)
+	buf := make([]byte, len(id))
+	for filled := 0; filled < len(id); {
+		if _, err := rand.Read(buf); err != nil {
+			return "", err
+		}
+		for _, b := range buf {
+			if int(b) < limit && filled < len(id) {
+				id[filled] = alphabet[int(b)%len(alphabet)]
+				filled++
+			}
+		}
 	}
-	for i := range b {
-		b[i] = alphabet[int(b[i])%len(alphabet)]
-	}
-	return string(b), nil
+	return string(id), nil
 }
 func parseExpiry(s string) (string, error) {
 	if strings.HasSuffix(s, "d") {

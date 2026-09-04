@@ -20,7 +20,7 @@ func withServer(t *testing.T, handler http.HandlerFunc) string {
 
 func TestWriteReadAndAmend(t *testing.T) {
 	var stored = "hello"
-	withServer(t, func(w http.ResponseWriter, r *http.Request) {
+	base := withServer(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.Method == "POST" && r.URL.Path == "/api/write":
 			var body map[string]any
@@ -48,7 +48,7 @@ func TestWriteReadAndAmend(t *testing.T) {
 	if code := run([]string{"write", "--edit-url"}, strings.NewReader("first"), &out, &errOut); code != 0 {
 		t.Fatalf("write code %d: %s", code, errOut.String())
 	}
-	if got := out.String(); got != defaultBase+"/abc1234#token\n" {
+	if got := out.String(); got != base+"/abc1234#token\n" {
 		t.Fatalf("write output %q", got)
 	}
 
@@ -98,7 +98,7 @@ func TestReadKeepsStdoutCleanOnError(t *testing.T) {
 
 func TestWriteRetriesCollisionsAndSupportsOutputModes(t *testing.T) {
 	calls := 0
-	withServer(t, func(w http.ResponseWriter, _ *http.Request) {
+	base := withServer(t, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
 		if calls < 3 {
 			w.WriteHeader(http.StatusConflict)
@@ -113,7 +113,7 @@ func TestWriteRetriesCollisionsAndSupportsOutputModes(t *testing.T) {
 		t.Fatalf("collision retry: code=%d calls=%d err=%q", code, calls, retryErr.String())
 	}
 	for _, tc := range []struct{ option, want string }{
-		{"", "abc1234\n"}, {"--url", defaultBase + "/abc1234\n"}, {"--edit-url", defaultBase + "/abc1234#token\n"},
+		{"", "abc1234\n"}, {"--url", base + "/abc1234\n"}, {"--edit-url", base + "/abc1234#token\n"},
 	} {
 		calls = 2
 		args := []string{"write"}
@@ -185,6 +185,36 @@ func TestExitCodesAndOptionValidation(t *testing.T) {
 		var out, errOut bytes.Buffer
 		if got := run(tc.args, strings.NewReader("x"), &out, &errOut); got != tc.want {
 			t.Errorf("run(%v)=%d want %d", tc.args, got, tc.want)
+		}
+	}
+}
+
+// Rejection sampling means every letter has to stay reachable: a mangled bound
+// would silently narrow the alphabet and cost collision headroom.
+func TestNewIDCoversTheAlphabetUnbiased(t *testing.T) {
+	seen := map[rune]int{}
+	const draws = 5000
+	for i := 0; i < draws; i++ {
+		id, err := newID()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := idFrom(id); err != nil {
+			t.Fatalf("newID produced an invalid tag %q", id)
+		}
+		for _, c := range id {
+			seen[c]++
+		}
+	}
+	if len(seen) != len(alphabet) {
+		t.Fatalf("newID reached %d of %d letters", len(seen), len(alphabet))
+	}
+	// 35k draws over 62 letters averages ~565 each; a modulo bias showed up as
+	// roughly 25% extra on the first eight, so this catches it with huge margin.
+	expected := draws * 7 / len(alphabet)
+	for c, n := range seen {
+		if n < expected/2 || n > expected*2 {
+			t.Fatalf("letter %q appeared %d times, expected near %d", c, n, expected)
 		}
 	}
 }

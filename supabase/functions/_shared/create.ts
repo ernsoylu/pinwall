@@ -27,8 +27,10 @@ export async function createPin(req: Request, protect: Protection, insert?: Inse
   try { body = await req.json(); } catch { return json({ error: "bad_json" }, 400); }
 
   const { id, language, content, ciphertext, iv, expires_at } = body;
-  if (!ID.test(String(id ?? ""))) return json({ error: "bad_id" }, 400);
-  if (!LANG.test(String(language ?? ""))) return json({ error: "bad_language" }, 400);
+  // typeof before the regex: String(["abc1234"]) passes it, and the array is
+  // what would then reach the insert.
+  if (typeof id !== "string" || !ID.test(id)) return json({ error: "bad_id" }, 400);
+  if (typeof language !== "string" || !LANG.test(language)) return json({ error: "bad_language" }, 400);
   if (expires_at != null && (typeof expires_at !== "string" ||
     !Number.isFinite(Date.parse(expires_at)) || Date.parse(expires_at) <= Date.now())) {
     return json({ error: "bad_expiry" }, 400);
@@ -50,10 +52,20 @@ export async function createPin(req: Request, protect: Protection, insert?: Inse
     ciphertext: isPrivate ? ciphertext : null,
     iv: isPrivate ? iv : null,
   };
-  const error = insert
-    ? await insert(row)
-    : (await createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!)
-      .from("pins").insert(row)).error;
+  let error: { code?: string } | null;
+  if (insert) {
+    error = await insert(row);
+  } else {
+    const db = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    error = (await db.from("pins").insert(row)).error;
+    // Expiry hid pins from every read but never removed the row. Sweep on the
+    // write path, the way consume_pin_write_limit already sweeps its own table.
+    // Best effort: a failed sweep must not fail someone's create.
+    if (!error) await db.rpc("purge_expired_pins").then(() => {}, () => {});
+  }
   if (error?.code === "23505") return json({ error: "id_taken" }, 409);
   if (error) return json({ error: "insert_failed" }, 500);
   return json({ id, edit_token }, 201);

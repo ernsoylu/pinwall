@@ -20,7 +20,10 @@ pw CLI ── /api, /r ─────┘          │
   retained and the Worker runs on the `pw.pee.pw/*` route.
 - **Supabase Edge Functions** are the only write boundary. `create-pin` verifies Turnstile for the
   browser, `create-pin-cli` applies an IP-based rate limit for POSIX clients, and `pin` handles CLI
-  reads and token-authorized amendments.
+  reads and token-authorized amendments. All three deploy `--no-verify-jwt`, so `create-pin-cli`
+  accepts the Worker only: it keys its limit on the IP the Worker vouches for with
+  `EDGE_PROXY_SECRET`, and refuses anything arriving without it rather than trusting a header the
+  caller supplied.
 - **PostgreSQL** stores pins, expiry metadata, edit-token hashes, and rate-limit counters. Database
   grants and RPCs prevent anonymous clients from inserting, changing, deleting, or recovering edit
   tokens directly.

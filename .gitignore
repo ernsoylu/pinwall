@@ -36,3 +36,6 @@ dist-ssr
 
 # Impeccable: session decision-page logs
 .impeccable/questions/
+
+# Claude Code session files
+.claude/

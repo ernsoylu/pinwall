@@ -13,6 +13,8 @@ Deno.test("create validates every trust-boundary field", async () => {
   for (const [change, status] of [
     [{ id: "bad" }, 400], [{ language: "UPPER SPACE" }, 400], [{ content: "" }, 400],
     [{ ciphertext: "sealed", content: undefined }, 400], [{ expires_at: "yesterday" }, 400],
+    // String(["abc1234"]) satisfies the id regex; the array must not reach the insert.
+    [{ id: ["abc1234"] }, 400], [{ language: ["text"] }, 400],
   ] as const) {
     const response = await createPin(request({ ...body, ...change }), allow, async () => null);
     assert(response.status === status, `${JSON.stringify(change)} returned ${response.status}`);
