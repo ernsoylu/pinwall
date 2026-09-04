@@ -1,20 +1,71 @@
 @import "tailwindcss";
 
-@theme {
-  --color-bg: #0b0c0e;
-  --color-surface: #131519;
-  --color-surface-2: #1a1d22;
-  --color-line: #272b33;
-  --color-fg: #e8eaed;
-  --color-fg-muted: #8b929c;
-  --color-fg-faint: #5a616b;
-  --color-accent: #ff5c38;
-  --color-accent-fg: #120704;
-  --color-success: #3dd68c;
-  --color-warn: #f5c451;
+/*
+ * Self-hosted so no visitor's IP or user agent reaches a third party on load —
+ * PRODUCT.md binds "no tracking, no ads", and a font CDN is a beacon. Both are
+ * variable faces: one file covers every weight the interface uses.
+ */
+@font-face {
+  font-family: "Libre Franklin";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/libre-franklin-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+@font-face {
+  font-family: "Azeret Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/azeret-mono-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * The left-luggage counter. Five inks, no sixth: enamel, ticket stock, brass,
+ * oxblood, ink. Every other tone is a gloss or stock tint derived from one of
+ * them — a new hue would be a sixth ink.
+ */
+@theme {
+  /*
+   * Everforest Dark, carrying the left-luggage counter's structure. The world's
+   * roles are unchanged — chrome, plate, recess, tag, seal, ink — only the
+   * material is. Six surfaces, three inks, two marks.
+   */
+
+  /* Chrome: the counter front, and the recess the plate sits in */
+  --color-enamel-deep: #1e2326;
+  --color-enamel: #232a2e;
+  --color-enamel-lit: #3d484d;
+  --color-on-enamel: #a6b0a6;
+
+  /* Plate: every surface that carries content, and its inset fields */
+  --color-ticket: #2d353b;
+  --color-ticket-hi: #252c31;
+  --color-ticket-rule: #75838c;
+
+  /* The tag, the hook, the primary action */
+  --color-brass: #dbbc7f;
+  --color-brass-lit: #e9d3a0;
+
+  /* The counter's warnings and refusals */
+  --color-oxblood: #e67e80;
+
+  /* Ink */
+  --color-ink: #d3c6aa;
+  --color-ink-muted: #a6b0a6;
+  --color-ink-faint: #94a199;
+
+  --font-sans: "Libre Franklin", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Azeret Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --ease-counter: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 html {
@@ -22,12 +73,176 @@ html {
 }
 
 body {
-  @apply bg-bg text-fg font-sans antialiased;
+  @apply bg-enamel-deep text-ink font-sans antialiased;
 }
 
-/* Shiki emits inline styles on <pre>; keep our own surface behind it. */
-.shiki {
-  background-color: transparent !important;
+/*
+ * Browser surfaces. Selection, caret, scrollbars and focus rings ship with
+ * defaults that belong to no design system; the counter owns them too.
+ */
+::selection {
+  background: var(--color-brass);
+  color: var(--color-enamel-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brass-lit);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-enamel-lit) transparent;
+}
+
+/* Plate surfaces get their own scrollbar tint; the page is dark throughout. */
+.stock,
+.stock * {
+  scrollbar-color: var(--color-ticket-rule) transparent;
+}
+
+/*
+ * The recess: the dark window the code is read through, cut into the ticket
+ * plate. Everforest's syntax colours are tuned for a dark ground, and the
+ * counter's own enamel-deep serves as one without opening a sixth ink.
+ */
+.recess,
+.stock .recess,
+.stock .recess * {
+  scrollbar-color: var(--color-enamel-lit) transparent;
+  background-color: var(--color-enamel-deep);
+}
+
+.recess {
+  position: relative;
+  box-shadow:
+    0 1px 0 rgb(0 0 0 / 0.4) inset,
+    14px 0 18px -18px rgb(0 0 0 / 0.75) inset;
+}
+
+/* The deposit form's binding edge: a ruled gutter down the recess's left. */
+.recess::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 12px;
+  pointer-events: none;
+  border-right: 1px solid rgb(211 198 170 / 0.07);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 19px,
+    rgb(211 198 170 / 0.05) 19px 20px
+  );
+}
+
+/* Ids, dates and counts are measurements: line them up. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/*
+ * Vitreous enamel: a fired, glassy surface catches a band of light along its
+ * top edge and pools darker at the bottom. OWN-WORLD names gloss as one of the
+ * two sources of further tone, so it is built rather than flat-filled.
+ */
+.enamel-gloss {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(211 198 170 / 0.07) 0,
+    rgb(211 198 170 / 0.02) 2px,
+    transparent 55%,
+    rgb(0 0 0 / 0.18) 100%
+  );
+}
+
+/*
+ * The deposit plate. Ticket stock with a fibre tint and the counter's own
+ * shadow — offset and softly blurred, the way a sheet lying on enamel casts.
+ */
+.plate {
+  background-color: var(--color-ticket);
+  background-image:
+    repeating-linear-gradient(
+      92deg,
+      rgb(211 198 170 / 0.018) 0 1px,
+      transparent 1px 3px
+    ),
+    repeating-linear-gradient(
+      2deg,
+      rgb(0 0 0 / 0.03) 0 1px,
+      transparent 1px 4px
+    );
+  box-shadow:
+    0 1px 0 rgb(211 198 170 / 0.07) inset,
+    0 10px 26px -10px rgb(0 0 0 / 0.55);
+}
+
+/* Ruled stock: the faint horizontal ruling of a counter's deposit form. */
+.ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 27px,
+    rgb(211 198 170 / 0.07) 27px 28px
+  );
+}
+
+/*
+ * The perforation between the two halves of a cloakroom ticket: the half you
+ * hand over and the half you keep. Drawn, not decorative — it marks exactly
+ * where the share link stops and the stub begins.
+ */
+.perforation {
+  height: 1px;
+  background-image: radial-gradient(
+    circle at 3px 50%,
+    var(--color-ticket-rule) 0 1.5px,
+    transparent 1.6px
+  );
+  background-size: 9px 100%;
+}
+
+/*
+ * The seal. Sealing acts on the deposit itself: a brass band closes across the
+ * whole plate from its hinge, and the stamp lands on the plate's own header.
+ * The switch is the hand that does it, never the thing that changes.
+ */
+@keyframes seal-close {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.seal-band {
+  animation: seal-close 0.5s var(--ease-counter) both;
+}
+
+@keyframes stamp-land {
+  from {
+    opacity: 0;
+    transform: rotate(-9deg) scale(1.5);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-4deg) scale(1);
+    filter: blur(0);
+  }
+}
+
+.stamp {
+  animation: stamp-land 0.38s var(--ease-counter) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seal-band,
+  .stamp {
+    animation: none;
+  }
 }
 
 /*
@@ -47,10 +262,10 @@ body {
       max-height: 20rem;
       overflow-y: auto;
       padding: 0.25rem;
-      border: 1px solid var(--color-line);
-      border-radius: 0.5rem;
-      background: var(--color-surface);
-      box-shadow: 0 18px 48px -8px rgb(0 0 0 / 0.6);
+      border: 1px solid var(--color-enamel-lit);
+      border-radius: 0.25rem;
+      background: var(--color-enamel-deep);
+      box-shadow: 0 18px 48px -12px rgb(0 0 0 / 0.7);
     }
 
     select.picker option {
@@ -58,19 +273,19 @@ body {
       align-items: center;
       gap: 0.5rem;
       padding: 0.4rem 0.6rem;
-      border-radius: 0.375rem;
-      color: var(--color-fg);
+      border-radius: 0.125rem;
+      color: var(--color-ticket);
       font-family: var(--font-mono);
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
     }
 
     select.picker option:hover,
     select.picker option:focus {
-      background: var(--color-surface-2);
+      background: var(--color-enamel);
     }
 
     select.picker option:checked {
-      color: var(--color-accent);
+      color: var(--color-brass-lit);
     }
 
     /* The default tick sits in a reserved column and shifts every label. */
@@ -79,8 +294,8 @@ body {
     }
 
     select.picker::picker-icon {
-      color: var(--color-fg-faint);
-      transition: rotate 0.15s ease;
+      color: var(--color-on-enamel);
+      transition: rotate 0.15s var(--ease-counter);
     }
 
     select.picker:open::picker-icon {
@@ -97,7 +312,8 @@ body {
 .markdown {
   font-size: 14px;
   line-height: 1.65;
-  color: var(--color-fg);
+  color: var(--color-ink);
+  max-width: 72ch;
 }
 
 .markdown > :first-child {
@@ -114,9 +330,11 @@ body {
 .markdown h4,
 .markdown h5,
 .markdown h6 {
-  margin: 1.6em 0 0.6em;
-  font-weight: 600;
-  line-height: 1.3;
+  margin: 1.7em 0 0.55em;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .markdown h1 {
@@ -125,7 +343,7 @@ body {
 
 .markdown h2 {
   padding-bottom: 0.3em;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-ticket-rule);
   font-size: 1.3em;
 }
 
@@ -160,17 +378,18 @@ body {
 }
 
 .markdown li::marker {
-  color: var(--color-fg-faint);
+  color: var(--color-ink-faint);
 }
 
 .markdown a {
-  color: var(--color-accent);
+  color: var(--color-oxblood);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 .markdown strong {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .markdown em {
@@ -179,28 +398,33 @@ body {
 
 .markdown blockquote {
   padding-left: 1em;
-  border-left: 2px solid var(--color-line);
-  color: var(--color-fg-muted);
+  border-left: 2px solid var(--color-brass);
+  color: var(--color-ink-muted);
 }
 
 .markdown code {
   padding: 0.15em 0.4em;
-  border-radius: 0.25rem;
-  background: var(--color-surface-2);
+  border-radius: 0.125rem;
+  background: var(--color-ticket-hi);
+  border: 1px solid var(--color-ticket-rule);
   font-family: var(--font-mono);
-  font-size: 0.85em;
+  font-size: 0.82em;
 }
 
 .markdown pre {
   overflow-x: auto;
   padding: 0.9rem 1rem;
-  border: 1px solid var(--color-line);
-  border-radius: 0.5rem;
-  background: var(--color-surface-2);
+  border: 1px solid var(--color-enamel-lit);
+  border-radius: 0.25rem;
+  background: var(--color-enamel-deep);
+  color: var(--color-ink); /* fenced code is styled, never highlighted */
+  color-scheme: dark;
+  scrollbar-color: var(--color-enamel-lit) transparent;
 }
 
 .markdown pre code {
   padding: 0;
+  border: 0;
   background: none;
   font-size: 0.8125rem;
 }
@@ -208,7 +432,7 @@ body {
 .markdown hr {
   margin: 1.5em 0;
   border: 0;
-  border-top: 1px solid var(--color-line);
+  border-top: 1px solid var(--color-ticket-rule);
 }
 
 .markdown table {
@@ -221,20 +445,40 @@ body {
 .markdown th,
 .markdown td {
   padding: 0.45em 0.7em;
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-ticket-rule);
   text-align: left;
 }
 
 .markdown th {
-  background: var(--color-surface-2);
-  font-weight: 600;
+  background: var(--color-ticket-hi);
+  font-weight: 700;
 }
 
 .markdown img {
   max-width: 100%;
-  border-radius: 0.375rem;
+  border-radius: 0.25rem;
 }
 
+/* marked emits task-list boxes disabled, and a disabled box ignores accent-color. */
 .markdown input[type="checkbox"] {
-  margin-right: 0.4em;
+  appearance: none;
+  width: 0.95em;
+  height: 0.95em;
+  margin: 0 0.45em 0 0;
+  border: 1px solid var(--color-ink-faint);
+  border-radius: 2px;
+  background: var(--color-ticket-hi);
+  vertical-align: -0.12em;
+}
+
+.markdown input[type="checkbox"]:checked {
+  border-color: var(--color-oxblood);
+  background: var(--color-oxblood);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 6.2l2.4 2.4 4.6-5' fill='none' stroke='%231e2326' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+}
+
+/* Shiki emits inline styles on <pre>; keep the stock behind it. */
+.shiki {
+  background-color: transparent !important;
 }

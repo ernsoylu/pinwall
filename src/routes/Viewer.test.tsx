@@ -41,7 +41,7 @@ describe("Viewer", () => {
     await userEvent.click(screen.getByRole("button", { name: /unlock/i }));
 
     expect(await screen.findByText("classified")).toBeInTheDocument();
-    expect(screen.getByText("Decrypted locally")).toBeInTheDocument();
+    expect(screen.getByText("unsealed here")).toBeInTheDocument();
   });
 
   it("reports a wrong passphrase and keeps the pin locked", async () => {
@@ -62,11 +62,11 @@ describe("Viewer", () => {
 
     const { unmount } = render(<Viewer id="abc1234" editToken={null} />);
     await screen.findByText("hi");
-    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Amend" })).not.toBeInTheDocument();
     unmount();
 
     render(<Viewer id="abc1234" editToken="tok-123" />);
-    await waitFor(() => expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Amend" })).toBeInTheDocument());
   });
 
   it("re-encrypts with the same passphrase when editing a private pin", async () => {
@@ -78,7 +78,7 @@ describe("Viewer", () => {
 
     await userEvent.type(await screen.findByLabelText("Passphrase"), "pw");
     await userEvent.click(screen.getByRole("button", { name: /unlock/i }));
-    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Amend" }));
 
     const box = screen.getByLabelText("Edit pin content");
     await userEvent.clear(box);
@@ -99,7 +99,7 @@ describe("Viewer", () => {
 
     render(<Viewer id="abc1234" editToken="bad" />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Amend" }));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("not valid");
@@ -108,7 +108,8 @@ describe("Viewer", () => {
   it("says so when the pin does not exist", async () => {
     getPin.mockResolvedValue(null);
     render(<Viewer id="nope99" editToken={null} />);
-    expect(await screen.findByText("No pin at /nope99.")).toBeInTheDocument();
+    expect(await screen.findByText("No deposit under this tag")).toBeInTheDocument();
+    expect(screen.getByText("nope99")).toBeInTheDocument();
   });
   it("renders markdown only on request, and puts that view in the URL", async () => {
     getPin.mockResolvedValue({

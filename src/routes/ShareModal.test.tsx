@@ -24,15 +24,15 @@ describe("ShareModal", () => {
 
   it("warns that the edit token cannot be recovered", () => {
     render(<ShareModal {...props} />);
-    expect(screen.getByText(/cannot be recovered/i)).toBeInTheDocument();
+    expect(screen.getByText(/cannot give you another copy/i)).toBeInTheDocument();
   });
 
   it("encodes the share link, not the edit link, into the QR code", async () => {
     render(<ShareModal {...props} />);
-    expect(screen.getByLabelText("QR code")).toBeInTheDocument();
+    expect(screen.getByLabelText("QR code for the share link")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: "Toggle QR code" }));
-    expect(screen.queryByLabelText("QR code")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("QR code for the share link")).not.toBeInTheDocument();
   });
 
   it("copies the share link to the clipboard", async () => {
@@ -47,7 +47,7 @@ describe("ShareModal", () => {
 
   it("describes a public pin differently from a private one", () => {
     const { unmount } = render(<ShareModal {...props} isPrivate={false} />);
-    expect(screen.getByText(/Anyone with the link can read it/i)).toBeInTheDocument();
+    expect(screen.getByText(/anyone with\s+the tag can read it/i)).toBeInTheDocument();
     unmount();
 
     render(<ShareModal {...props} isPrivate />);

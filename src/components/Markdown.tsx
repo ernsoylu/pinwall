@@ -13,12 +13,12 @@ export function Markdown({ source }: { source: string }) {
   }, [source]);
 
   if (html === null) {
-    return <div className="p-4 text-[13px] text-fg-muted">Rendering…</div>;
+    return <div className="p-4 font-mono text-[12px] text-ink-faint">Rendering…</div>;
   }
 
   return (
     <div
-      className="markdown p-4 sm:p-5"
+      className="markdown stock px-4 py-5"
       // renderMarkdown runs the output through DOMPurify before it gets here.
       dangerouslySetInnerHTML={{ __html: html }}
     />

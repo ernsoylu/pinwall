@@ -29,7 +29,7 @@ export type Language = keyof typeof LANG_LOADERS;
 
 export const isLanguage = (v: string): v is Language => v in LANG_LOADERS;
 
-const THEME = "github-dark-default";
+const THEME = "everforest-dark";
 
 let core: Promise<HighlighterCore> | null = null;
 const loaded = new Set<string>(["text"]);
@@ -39,7 +39,7 @@ function getCore() {
   core ??= Promise.all([import("shiki/core"), import("shiki/engine/javascript")]).then(
     ([{ createHighlighterCore }, { createJavaScriptRegexEngine }]) =>
       createHighlighterCore({
-        themes: [import("@shikijs/themes/github-dark-default")],
+        themes: [import("@shikijs/themes/everforest-dark")],
         langs: [],
         // The JS regex engine avoids shipping the ~600 kB Oniguruma wasm blob.
         engine: createJavaScriptRegexEngine(),

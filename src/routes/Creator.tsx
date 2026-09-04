@@ -1,13 +1,14 @@
-import { Code, KeyRound, Lock, ShieldCheck } from "lucide-react";
+import { Code2, KeyRound } from "lucide-react";
 import { useState } from "react";
 import { Button } from "../components/Button";
 import { CodeEditor } from "../components/CodeEditor";
-import { Shell } from "../components/Shell";
+import { LabelGrid, Shell } from "../components/Shell";
 import { Turnstile } from "../components/Turnstile";
 import { ShareModal } from "./ShareModal";
 import { createPin } from "../lib/api";
 import { encrypt } from "../lib/crypto";
 import { LANGUAGES } from "../lib/highlight";
+import { dateStamp } from "../lib/time";
 
 export function Creator() {
   const [body, setBody] = useState("");
@@ -41,17 +42,35 @@ export function Creator() {
 
   return (
     <Shell
-      actions={
-        <span className="hidden items-center gap-2 text-xs text-fg-faint sm:flex">
-          <ShieldCheck className="size-[13px]" />
-          anonymous · encrypted in your browser
-        </span>
-      }
+      notice="A sealed deposit is encrypted in this browser — the counter receives ciphertext it holds no key for"
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface">
-        <div className="flex shrink-0 items-center justify-between border-b border-line px-3.5 py-2.5">
-          <span className="font-mono text-xs text-fg-muted">untitled</span>
-          <span className="font-mono text-xs text-fg-faint">{body.length} chars</span>
+      {/* The deposit plate: ruled, dated, and open before a character is typed. */}
+      <div className="plate relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[3px]">
+        {/* The seal closing across the whole deposit, from its hinge. */}
+        {isPrivate && (
+          <span
+            aria-hidden
+            className="seal-band pointer-events-none absolute inset-x-0 top-0 z-10 h-[3px] bg-brass"
+          />
+        )}
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-ticket-rule px-4 py-2.5">
+          <LabelGrid
+            tag={<span className="text-ink-faint">not issued</span>}
+            deposited={dateStamp()}
+            keepUntil="no limit"
+            seal={
+              isPrivate ? (
+                <span className="stamp -my-0.5 inline-block rounded-[2px] border border-oxblood px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-oxblood">
+                  Sealed
+                </span>
+              ) : (
+                <span className="text-ink-faint">open</span>
+              )
+            }
+          />
+          <span className="tabular shrink-0 font-mono text-[11px] text-ink-faint">
+            {body.length.toLocaleString()} chars
+          </span>
         </div>
         <CodeEditor
           value={body}
@@ -63,72 +82,79 @@ export function Creator() {
       </div>
 
       {error && (
-        <p role="alert" className="text-xs text-accent">
+        <p
+          role="alert"
+          className="flex items-center gap-2 rounded-[3px] border border-oxblood bg-oxblood/15 px-3 py-2 text-[12.5px] text-ink"
+        >
           {error}
         </p>
       )}
 
-      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 rounded-md border border-line bg-surface px-3 py-2.5 text-sm">
-            <Code className="size-3.5 text-fg-muted" />
+      {/* The deposit terms, read as one line of conditions with the action at its end. */}
+      <div className="flex shrink-0 flex-col gap-2.5 rounded-[3px] border border-enamel-lit bg-enamel p-2.5 sm:flex-row sm:items-center sm:gap-0 sm:py-1.5 sm:pl-3.5 sm:pr-1.5">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2 sm:flex-nowrap">
+          <label className="flex shrink-0 items-center gap-2">
+            <Code2 className="size-3.5 shrink-0 text-on-enamel" aria-hidden />
+            <span className="hidden font-mono text-[10px] uppercase tracking-[0.11em] text-on-enamel md:inline">
+              Deposit as
+            </span>
             <span className="sr-only">Language</span>
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="picker bg-transparent font-mono text-[13px] font-medium outline-none"
+              className="picker cursor-pointer rounded-[2px] bg-transparent py-1 font-mono text-[12px] font-medium text-ink outline-none"
             >
               {LANGUAGES.map((l) => (
-                <option key={l} value={l} className="bg-surface">
+                <option key={l} value={l} className="bg-enamel-deep">
                   {l}
                 </option>
               ))}
             </select>
           </label>
 
+          <Divider />
+
           <button
             type="button"
             role="switch"
             aria-checked={isPrivate}
             onClick={() => setPrivate((v) => !v)}
-            className={`flex items-center gap-2 rounded-md border px-3 py-2.5 text-sm font-medium ${
-              isPrivate ? "border-accent bg-surface-2" : "border-line bg-surface"
+            className={`shrink-0 rounded-[2px] border px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+              isPrivate
+                ? "border-brass bg-brass text-enamel-deep"
+                : "border-dashed border-on-enamel/60 text-on-enamel hover:border-brass-lit hover:text-brass-lit"
             }`}
           >
-            <Lock className={`size-3.5 ${isPrivate ? "text-accent" : "text-fg-muted"}`} />
-            Private
-            <span
-              className={`ml-1 flex h-4 w-7 items-center rounded-full p-0.5 ${
-                isPrivate ? "justify-end bg-accent" : "justify-start bg-line"
-              }`}
-            >
-              <span className="size-3 rounded-full bg-white" />
-            </span>
+            {isPrivate ? "Sealed" : "Seal it"}
           </button>
 
           {isPrivate && (
-            <label className="flex items-center gap-2 rounded-md border border-line bg-surface px-3 py-2.5">
-              <KeyRound className="size-3.5 text-fg-faint" />
-              <span className="sr-only">Passphrase</span>
-              <input
-                type="password"
-                value={passphrase}
-                onChange={(e) => setPassphrase(e.target.value)}
-                placeholder="passphrase"
-                className="w-40 bg-transparent font-mono text-[13px] outline-none placeholder:text-fg-faint"
-              />
-            </label>
+            <>
+              <Divider />
+              <label className="flex min-w-0 basis-full items-center gap-2 sm:basis-auto">
+                <KeyRound className="size-3.5 shrink-0 text-brass-lit" aria-hidden />
+                <span className="sr-only">Passphrase</span>
+                <input
+                  type="password"
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                  placeholder="passphrase"
+                  autoComplete="new-password"
+                  className="w-full min-w-0 rounded-[2px] bg-transparent py-1 font-mono text-[12px] text-ink caret-brass-lit outline-none placeholder:text-on-enamel sm:w-44 sm:flex-none"
+                />
+              </label>
+            </>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:justify-end">
+        <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
           <Turnstile
             onToken={setToken}
             onError={(code) => setError(turnstileMessage(code))}
             resetKey={resetKey}
           />
-          <Button onClick={submit} disabled={!canSubmit}>
-            {busy ? "Creating…" : "Create pin"}
+          <Button onClick={submit} disabled={!canSubmit} className="px-4 py-2">
+            {busy ? "Depositing…" : "Deposit"}
           </Button>
         </div>
       </div>
@@ -146,6 +172,10 @@ export function Creator() {
   );
 }
 
+function Divider() {
+  return <span aria-hidden className="hidden h-4 w-px shrink-0 bg-enamel-lit sm:block" />;
+}
+
 function messageFor(code: string) {
   switch (code) {
     case "turnstile_failed":
@@ -153,11 +183,11 @@ function messageFor(code: string) {
     case "turnstile_misconfigured":
       return "Verification is unavailable (server key misconfigured).";
     case "id_taken":
-      return "Could not find a free short link. Try again.";
+      return "Could not find a free tag. Try again.";
     case "too_large":
       return "That pin is over the 256 KB limit.";
     default:
-      return "Could not create the pin. Try again.";
+      return "Could not take the deposit. Try again.";
   }
 }
 

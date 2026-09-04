@@ -2,7 +2,15 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "./Button";
 
-export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
+export function CopyButton({
+  value,
+  label = "Copy",
+  variant = "stock",
+}: {
+  value: string;
+  label?: string;
+  variant?: "stock" | "ghost";
+}) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -13,7 +21,7 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
 
   return (
     <Button
-      variant="ghost"
+      variant={variant}
       size="icon"
       aria-label={label}
       title={label}
@@ -23,9 +31,9 @@ export function CopyButton({ value, label = "Copy" }: { value: string; label?: s
       }}
     >
       {copied ? (
-        <Check className="size-[15px] text-success" />
+        <Check className="size-[15px] text-brass" />
       ) : (
-        <Copy className="size-[15px] text-fg-muted" />
+        <Copy className="size-[15px]" />
       )}
     </Button>
   );

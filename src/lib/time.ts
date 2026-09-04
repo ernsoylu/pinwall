@@ -20,3 +20,12 @@ export function relativeTime(iso: string, now = Date.now()) {
   }
   return iso;
 }
+
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+
+/** The counter's date die: `04 SEP 2026`, fixed width so the label grid never shifts. */
+export function dateStamp(iso: string | number | Date = Date.now()) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "——";
+  return `${String(d.getDate()).padStart(2, "0")} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
