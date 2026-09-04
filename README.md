@@ -53,12 +53,25 @@ pw update
 decrypts reads locally using the browser-compatible format. Command arguments may be visible in
 shell history and process listings.
 
-The installer mirror is bootstrapped once after the API deploy, then its edit URL is saved as the
-`PINWALL_INSTALL_EDIT_URL` GitHub Actions secret:
+### Installer mirror
+
+`https://pw.pee.pw/r/pwsh001` is itself a pin, so `curl … | sh` serves whatever that pin holds.
+The release workflow keeps it in step with `install.sh`, and checks before publishing rather than
+after: a release it cannot mirror is refused outright, because shipping the previous version's
+installer alongside new binaries is worse than not releasing.
+
+Bootstrapping happens once, on a tag nobody has claimed:
 
 ```sh
 go run ./cmd/pw write --tag pwsh001 --edit-url < install.sh
 ```
+
+Save the printed edit URL as the `PINWALL_INSTALL_EDIT_URL` repository secret. **There is no second
+chance.** The tag returns `id_taken` once it exists, and the edit token cannot be read back out of
+the row — `anon` has no `SELECT` grant on `edit_token`, which is the same property that makes the
+privacy claim hold. If the URL is lost, the mirror can only move to a fresh tag, which changes the
+documented install command; serving `install.sh` as a static asset from `public/` is the way out
+that keeps a stable URL without a token to lose.
 
 ## How the privacy works
 
