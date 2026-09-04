@@ -2,8 +2,13 @@
  * DOMPurify in src/lib/markdown.ts is the only thing standing between a hostile
  * markdown pin and a page that may be holding a decrypted private pin — see
  * attention.md. These headers are the second layer it never had.
+ *
+ * assets.run_worker_first is scoped to /api/* and /r/*, so this Worker is not in
+ * the path for a normal page load: public/_headers carries the same policy for
+ * those, and _headers in turn does not apply to anything a Worker generates.
+ * Both are needed, and index.test.js fails if they drift apart.
  */
-const SECURITY_HEADERS = {
+export const SECURITY_HEADERS = {
   "content-security-policy": [
     "default-src 'self'",
     // Turnstile ships its challenge as a script and an iframe from Cloudflare.
