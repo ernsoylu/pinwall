@@ -2,6 +2,34 @@
 
 Fast, anonymous, zero-knowledge text and code sharing. Live at **https://pw.pee.pw**.
 
+## Architecture
+
+```text
+Browser ── page/assets ──┐
+                        ├── Cloudflare Worker (pw.pee.pw)
+pw CLI ── /api, /r ─────┘          │
+                                    ▼
+                         Supabase Edge Functions
+                                    │
+                                    ▼
+                         PostgreSQL (pins + limits)
+```
+
+- **Cloudflare Worker** serves the built web app, exposes raw public pins at `/r/TAG`, and proxies
+  CLI requests without exposing the shared edge secret. The existing `pw.pee.pw` DNS record is
+  retained and the Worker runs on the `pw.pee.pw/*` route.
+- **Supabase Edge Functions** are the only write boundary. `create-pin` verifies Turnstile for the
+  browser, `create-pin-cli` applies an IP-based rate limit for POSIX clients, and `pin` handles CLI
+  reads and token-authorized amendments.
+- **PostgreSQL** stores pins, expiry metadata, edit-token hashes, and rate-limit counters. Database
+  grants and RPCs prevent anonymous clients from inserting, changing, deleting, or recovering edit
+  tokens directly.
+- **Clients own encryption.** The browser and `pw` encrypt and decrypt private pins locally. The
+  passphrase is never sent to Cloudflare, Supabase, or PostgreSQL.
+- **GitHub Actions** runs the browser, Worker, Edge Function, installer, and Go checks. Merges to
+  `main` deploy Supabase and the Worker; version tags build signed-by-checksum release archives used
+  by the installer at `/r/pwsh001`.
+
 ## CLI
 
 ```sh
