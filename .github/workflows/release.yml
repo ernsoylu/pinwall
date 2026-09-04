@@ -26,6 +26,7 @@ jobs:
         env:
           INSTALL_EDIT_URL: ${{ secrets.PINWALL_INSTALL_EDIT_URL }}
         run: |
-          test -n "$INSTALL_EDIT_URL"
-          go run ./cmd/pw amend "$INSTALL_EDIT_URL" < install.sh
+          if [ -n "$INSTALL_EDIT_URL" ]; then
+            go run ./cmd/pw amend "$INSTALL_EDIT_URL" < install.sh
+          fi
           curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/pwsh001 | cmp - install.sh
