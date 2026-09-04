@@ -40,7 +40,9 @@ export function Turnstile({ onToken, resetKey = 0 }: Props) {
   const host = useRef<HTMLDivElement>(null);
   // Keep the latest callback without re-rendering the widget on every parent render.
   const cb = useRef(onToken);
-  cb.current = onToken;
+  useEffect(() => {
+    cb.current = onToken;
+  }, [onToken]);
 
   useEffect(() => {
     let widgetId: string | undefined;

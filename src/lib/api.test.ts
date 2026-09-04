@@ -81,7 +81,7 @@ describe("createPin", () => {
 
 describe("getPin", () => {
   it("never selects edit_token, which anon may not read", async () => {
-    const select = vi.fn(() => ({ eq: () => ({ maybeSingle }) }));
+    const select = vi.fn((_columns: string) => ({ eq: () => ({ maybeSingle }) }));
     const { supabase } = await import("./api");
     vi.spyOn(supabase, "from").mockReturnValue({ select } as never);
     maybeSingle.mockResolvedValue({ data: null, error: null });

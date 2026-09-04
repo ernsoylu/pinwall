@@ -5,6 +5,7 @@ import { CodeBlock } from "../components/CodeBlock";
 import { CopyButton } from "../components/CopyButton";
 import { Shell } from "../components/Shell";
 import { getPin, updatePin, type Pin } from "../lib/api";
+import { relativeTime } from "../lib/time";
 import { WrongPassphraseError, decrypt, encrypt } from "../lib/crypto";
 
 type State =
@@ -225,26 +226,3 @@ function Centered({ children }: { children: React.ReactNode }) {
     </Shell>
   );
 }
-
-function relativeTime(iso: string) {
-  const seconds = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
-  const units: [Intl.RelativeTimeFormatUnit, number][] = [
-    ["second", 60],
-    ["minute", 60],
-    ["hour", 24],
-    ["day", 30],
-    ["month", 12],
-    ["year", Infinity],
-  ];
-
-  let value = seconds;
-  for (const [unit, step] of units) {
-    if (Math.abs(value) < step) {
-      return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(-value, unit);
-    }
-    value = Math.round(value / step);
-  }
-  return iso;
-}
-
-export { relativeTime };
