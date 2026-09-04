@@ -36,6 +36,42 @@ VITE_TURNSTILE_SITE_KEY=
 The Turnstile **secret** key is set as a Supabase edge function secret (`TURNSTILE_SECRET_KEY`),
 never in this repo.
 
+## Turnstile keys: dev vs production
+
+Cloudflare production keys reject `localhost` and flag automation tools, so
+`npm run dev` must not use them.
+
+| | Sitekey (frontend) | Secret (backend) |
+|---|---|---|
+| dev | `1x00000000000000000000AA` (always passes) | `1x0000000000000000000000000000000AA` |
+| prod | real, from the Cloudflare dashboard | real, as a Supabase function secret |
+
+The dev sitekey lives in `.env.development`, which Vite loads for `vite dev`
+only and which overrides `.env.local`. `npm run build` never sees it, and CI
+supplies the real values as repository variables. So the split is automatic —
+there is nothing to remember to switch.
+
+**The one gotcha:** the dummy sitekey emits `XXXX.DUMMY.TOKEN.XXXX`, and a
+*production* secret rejects that token. Against the deployed function, local
+creates therefore return `turnstile_failed` by design — the widget renders and
+the request reaches the backend, but verification fails on the last hop.
+
+To exercise a full create locally, run the whole stack locally so the function
+uses a dev secret:
+
+```bash
+supabase start                              # db + functions on :54321
+echo 'TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA' > supabase/functions/.env
+supabase functions serve create-pin --env-file supabase/functions/.env
+```
+
+then point `.env.development` at `VITE_SUPABASE_URL=http://localhost:54321`
+(supabase-js derives the functions URL from it; there is no separate override).
+
+Do **not** instead set the test secret on the deployed project. A test secret
+accepts `XXXX.DUMMY.TOKEN.XXXX` from anyone, which removes bot protection from
+production entirely.
+
 ## Backend
 
 `supabase/migrations` holds the schema and the `update_pin_content` RPC.
