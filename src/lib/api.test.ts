@@ -37,12 +37,18 @@ describe("createPin", () => {
   it("sends a generated id and the turnstile token", async () => {
     invoke.mockResolvedValue({ data: { id: "abc1234", edit_token: "tok" }, error: null });
 
-    await createPin({ content: "hi", language: "typescript", turnstileToken: "t0ken" });
+    await createPin({
+      content: "hi",
+      language: "typescript",
+      turnstileToken: "t0ken",
+      expires_at: "2099-01-01T23:59:59.999Z",
+    });
 
     const [name, options] = invoke.mock.calls[0];
     expect(name).toBe("create-pin");
     expect(options.body.token).toBe("t0ken");
     expect(options.body.id).toMatch(DB_ID_FORMAT);
+    expect(options.body.expires_at).toBe("2099-01-01T23:59:59.999Z");
     // The turnstile token must not be forwarded under its internal name.
     expect(options.body).not.toHaveProperty("turnstileToken");
   });
@@ -52,7 +58,12 @@ describe("createPin", () => {
       .mockResolvedValueOnce({ data: null, error: httpError(409, "id_taken") })
       .mockResolvedValueOnce({ data: { id: "xyz7890", edit_token: "tok" }, error: null });
 
-    const result = await createPin({ content: "hi", language: "text", turnstileToken: "t" });
+    const result = await createPin({
+      content: "hi",
+      language: "text",
+      turnstileToken: "t",
+      expires_at: null,
+    });
 
     expect(result.id).toBe("xyz7890");
     expect(invoke).toHaveBeenCalledTimes(2);
@@ -73,7 +84,7 @@ describe("createPin", () => {
     invoke.mockResolvedValue({ data: null, error: httpError(403, "turnstile_failed") });
 
     await expect(
-      createPin({ content: "hi", language: "text", turnstileToken: "bad" }),
+      createPin({ content: "hi", language: "text", turnstileToken: "bad", expires_at: null }),
     ).rejects.toMatchObject({ code: "turnstile_failed" });
     expect(invoke).toHaveBeenCalledTimes(1);
   });

@@ -37,11 +37,20 @@ Deno.serve(async (req) => {
     return json({ error: "bad_json" }, 400);
   }
 
-  const { token, id, language, content, ciphertext, iv } = body as Record<string, string>;
+  const { token, id, language, content, ciphertext, iv, expires_at } = body as Record<
+    string,
+    string
+  >;
 
   if (!token) return json({ error: "missing_turnstile_token" }, 400);
   if (!ID.test(id ?? "")) return json({ error: "bad_id" }, 400);
   if (!LANG.test(language ?? "")) return json({ error: "bad_language" }, 400);
+  if (
+    expires_at != null &&
+    (!Number.isFinite(Date.parse(expires_at)) || Date.parse(expires_at) <= Date.now())
+  ) {
+    return json({ error: "bad_expiry" }, 400);
+  }
 
   const isPrivate = ciphertext != null;
   const payload = isPrivate ? ciphertext : content;
@@ -81,6 +90,7 @@ Deno.serve(async (req) => {
     id,
     language,
     edit_token,
+    expires_at: expires_at ?? null,
     content: isPrivate ? null : content,
     ciphertext: isPrivate ? ciphertext : null,
     iv: isPrivate ? iv : null,

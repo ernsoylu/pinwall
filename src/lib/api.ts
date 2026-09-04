@@ -13,7 +13,7 @@ export const newId = customAlphabet(
 );
 
 // anon has no SELECT grant on edit_token, so `select *` is rejected.
-const COLUMNS = "id, content, ciphertext, iv, language, created_at";
+const COLUMNS = "id, content, ciphertext, iv, language, created_at, expires_at";
 
 export type Pin = {
   id: string;
@@ -22,6 +22,7 @@ export type Pin = {
   iv: string | null;
   language: string;
   created_at: string;
+  expires_at: string | null;
 };
 
 export class ApiError extends Error {
@@ -43,6 +44,7 @@ export async function getPin(id: string): Promise<Pin | null> {
 type NewPin = {
   language: string;
   turnstileToken: string;
+  expires_at?: string | null;
 } & ({ content: string } | { ciphertext: string; iv: string });
 
 /** Creates a pin, retrying on nanoid collisions. Returns the id and edit token. */
