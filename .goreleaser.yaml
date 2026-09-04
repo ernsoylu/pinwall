@@ -21,3 +21,18 @@ checksum:
 
 changelog:
   use: git
+
+# PW_INSTALL_URL is set by the release workflow, which mints the pin holding
+# this release's install.sh before GoReleaser runs.
+release:
+  footer: |
+
+    ## Install
+
+    ```sh
+    curl -fsSL --proto '=https' --proto-redir '=https' {{ .Env.PW_INSTALL_URL }} | sh
+    ```
+
+    Each release mints its own installer URL, so there is no long-lived edit
+    token behind the script you pipe to `sh`. An older release's URL keeps
+    working — the script resolves the latest version from GitHub when it runs.

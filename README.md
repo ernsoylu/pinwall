@@ -30,13 +30,16 @@ pw CLI ── /api, /r ─────┘          │
 - **Clients own encryption.** The browser and `pw` encrypt and decrypt private pins locally. The
   passphrase is never sent to Cloudflare, Supabase, or PostgreSQL.
 - **GitHub Actions** runs the browser, Worker, Edge Function, installer, and Go checks. Merges to
-  `main` deploy Supabase and the Worker; version tags build signed-by-checksum release archives used
-  by the installer at `/r/pwsh001`.
+  `main` deploy Supabase and the Worker; version tags build signed-by-checksum release archives and
+  mint the installer pin whose URL that release's notes carry.
 
 ## CLI
 
+The install command lives in each release's notes, because every release mints its own installer
+pin — [latest release](https://github.com/ernsoylu/pinwall/releases/latest):
+
 ```sh
-curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/pwsh001 | sh
+curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/TAG | sh
 ```
 
 ```sh
@@ -53,25 +56,20 @@ pw update
 decrypts reads locally using the browser-compatible format. Command arguments may be visible in
 shell history and process listings.
 
-### Installer mirror
+### The installer
 
-`https://pw.pee.pw/r/pwsh001` is itself a pin, so `curl … | sh` serves whatever that pin holds.
-The release workflow keeps it in step with `install.sh`, and checks before publishing rather than
-after: a release it cannot mirror is refused outright, because shipping the previous version's
-installer alongside new binaries is worse than not releasing.
+`curl … | sh` fetches a pin, and each release mints a new one holding that version's `install.sh`.
+The release workflow creates it before publishing, verifies it reads back byte-for-byte, and passes
+the URL to GoReleaser, which prints it in the release notes.
 
-Bootstrapping happens once, on a tag nobody has claimed:
+Minting rather than amending is what keeps this honest: there is no long-lived edit token behind the
+script people pipe to `sh`, so there is nothing to leak, rotate, or lose. It also means a tag is
+never reused — `pw write --tag` returns `id_taken` once an id exists, and the edit token cannot be
+read back out of the row, since `anon` has no `SELECT` grant on `edit_token`.
 
-```sh
-go run ./cmd/pw write --tag pwsh001 --edit-url < install.sh
-```
-
-Save the printed edit URL as the `PINWALL_INSTALL_EDIT_URL` repository secret. **There is no second
-chance.** The tag returns `id_taken` once it exists, and the edit token cannot be read back out of
-the row — `anon` has no `SELECT` grant on `edit_token`, which is the same property that makes the
-privacy claim hold. If the URL is lost, the mirror can only move to a fresh tag, which changes the
-documented install command; serving `install.sh` as a static asset from `public/` is the way out
-that keeps a stable URL without a token to lose.
+An older release's URL keeps working. `install.sh` resolves the newest release from the GitHub API
+when it runs, so it stays correct; only a change to the installer's own logic makes an old URL
+serve stale behaviour, which is why the current one belongs in the current release's notes.
 
 ## How the privacy works
 
