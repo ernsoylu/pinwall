@@ -17,6 +17,7 @@ const SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explic
 let scriptLoad: Promise<void> | null = null;
 
 function loadScript() {
+  if (window.turnstile) return Promise.resolve();
   if (!scriptLoad) {
     scriptLoad = new Promise((resolve, reject) => {
       const el = document.createElement("script");
@@ -32,38 +33,53 @@ function loadScript() {
 
 type Props = {
   onToken: (token: string | null) => void;
+  /** Cloudflare's client-side error code, e.g. "400020" (invalid sitekey). */
+  onError?: (code: string) => void;
   /** Bump to discard a spent token and render a fresh challenge. */
   resetKey?: number;
 };
 
-export function Turnstile({ onToken, resetKey = 0 }: Props) {
+export function Turnstile({ onToken, onError, resetKey = 0 }: Props) {
   const host = useRef<HTMLDivElement>(null);
-  // Keep the latest callback without re-rendering the widget on every parent render.
-  const cb = useRef(onToken);
+  // Keep the latest callbacks without re-rendering the widget on every parent render.
+  const cb = useRef({ onToken, onError });
   useEffect(() => {
-    cb.current = onToken;
-  }, [onToken]);
+    cb.current = { onToken, onError };
+  });
 
   useEffect(() => {
     let widgetId: string | undefined;
     let cancelled = false;
 
+    // Cloudflare only reports the failure inside its own widget, so surface the
+    // code — without it a bad sitekey looks like a permanently disabled button.
+    const fail = (code: string) => {
+      cb.current.onToken(null);
+      cb.current.onError?.(code);
+    };
+
+    const sitekey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+    if (!sitekey) {
+      fail("missing_sitekey");
+      return;
+    }
+
     loadScript()
       .then(() => {
         if (cancelled || !host.current || !window.turnstile) return;
         widgetId = window.turnstile.render(host.current, {
-          sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+          sitekey,
           theme: "dark",
-          callback: (token: string) => cb.current(token),
-          "expired-callback": () => cb.current(null),
-          "error-callback": () => cb.current(null),
+          callback: (token: string) => cb.current.onToken(token),
+          "expired-callback": () => cb.current.onToken(null),
+          "error-callback": (code: string) => fail(code),
         });
       })
-      .catch(() => cb.current(null));
+      .catch(() => fail("script_failed"));
 
     return () => {
       cancelled = true;
-      cb.current(null);
+      cb.current.onToken(null);
       if (widgetId) window.turnstile?.remove(widgetId);
     };
   }, [resetKey]);
