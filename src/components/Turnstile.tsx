@@ -70,6 +70,12 @@ export function Turnstile({ onToken, onError, resetKey = 0 }: Props) {
         widgetId = window.turnstile.render(host.current, {
           sitekey,
           theme: "dark",
+          // Keep Cloudflare's branded box out of the layout unless the visitor
+          // actually has to act. resetKey tears the widget down and renders a
+          // new one rather than calling reset(), which is what keeps
+          // interaction-only working on a retry:
+          // https://community.cloudflare.com/t/579897
+          appearance: "interaction-only",
           callback: (token: string) => cb.current.onToken(token),
           "expired-callback": () => cb.current.onToken(null),
           "error-callback": (code: string) => fail(code),

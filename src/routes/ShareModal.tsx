@@ -8,13 +8,15 @@ type Props = {
   id: string;
   editToken: string;
   isPrivate: boolean;
+  language: string;
   onClose: () => void;
 };
 
-export function ShareModal({ id, editToken, isPrivate, onClose }: Props) {
+export function ShareModal({ id, editToken, isPrivate, language, onClose }: Props) {
   const [showQr, setShowQr] = useState(true);
   const shareUrl = `${location.origin}/${id}`;
   const editUrl = `${shareUrl}#${editToken}`;
+  const renderedUrl = `${shareUrl}?view=rendered`;
 
   return (
     <div
@@ -52,6 +54,12 @@ export function ShareModal({ id, editToken, isPrivate, onClose }: Props) {
         </Field>
 
         {showQr && <QrPanel url={shareUrl} />}
+
+        {language === "markdown" && (
+          <Field label="RENDERED LINK" url={renderedUrl}>
+            <CopyButton value={renderedUrl} label="Copy rendered link" />
+          </Field>
+        )}
 
         <div className="flex flex-col gap-2">
           <Field label="EDIT LINK" url={editUrl}>
