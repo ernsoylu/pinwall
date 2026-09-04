@@ -49,12 +49,12 @@ export function CodeEditor({
     };
   }, [value, language]);
 
-  const layer = "p-3.5 font-mono text-[13px]/[1.55] whitespace-pre";
+  const layer = "p-4 font-mono text-[12.5px]/[1.6] whitespace-pre";
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className="stock flex min-h-0 flex-1 flex-col">
       {isMarkdown && (
-        <div className="flex shrink-0 items-center gap-1 border-b border-line px-2 py-1.5">
+        <div className="flex shrink-0 items-center gap-1 border-b border-ticket-rule px-4 py-1.5">
           <Tab active={!preview} onClick={() => setPreview(false)}>
             Write
           </Tab>
@@ -67,17 +67,17 @@ export function CodeEditor({
       {showPreview ? (
         <div className="min-h-0 flex-1 overflow-auto">
           {value.trim() === "" ? (
-            <p className="p-4 text-[13px] text-fg-faint">Nothing to preview yet.</p>
+            <p className="p-4 font-mono text-[12px] text-ink-faint">Nothing to preview yet.</p>
           ) : (
             <Markdown source={value} />
           )}
         </div>
       ) : (
-        <div className="relative min-h-0 flex-1">
+        <div className="recess relative min-h-0 flex-1">
           <div
             ref={back}
             aria-hidden
-            className={`pointer-events-none absolute inset-0 overflow-hidden ${layer} [&_code]:font-inherit [&_pre]:m-0 [&_pre]:!bg-transparent [&_pre]:p-0`}
+            className={`pointer-events-none absolute inset-0 overflow-hidden !bg-transparent ${layer} [&_code]:font-inherit [&_pre]:m-0 [&_pre]:!bg-transparent [&_pre]:p-0`}
             dangerouslySetInnerHTML={{ __html: html ?? "" }}
           />
           <textarea
@@ -106,8 +106,8 @@ export function CodeEditor({
             autoFocus={autoFocus}
             aria-label={label}
             placeholder={placeholder}
-            className={`absolute inset-0 resize-none overflow-auto bg-transparent outline-none placeholder:text-fg-faint ${layer} ${
-              html ? "text-transparent caret-fg" : "text-fg-muted caret-fg"
+            className={`absolute inset-0 resize-none overflow-auto !bg-transparent caret-brass-lit outline-none placeholder:text-on-enamel focus-visible:outline-none ${layer} ${
+              html ? "text-transparent" : "text-ink"
             }`}
           />
         </div>
@@ -130,8 +130,10 @@ function Tab({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`rounded px-2.5 py-1 font-mono text-[11px] transition-colors ${
-        active ? "bg-surface-2 text-fg" : "text-fg-faint hover:text-fg-muted"
+      className={`rounded-[2px] px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-[0.1em] transition-colors ${
+        active
+          ? "bg-ink text-enamel-deep"
+          : "text-ink-faint hover:bg-ticket-hi hover:text-ink-muted"
       }`}
     >
       {children}

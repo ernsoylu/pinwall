@@ -114,15 +114,17 @@ export function Turnstile({ onToken, onError, resetKey = 0 }: Props) {
     <div
       className={
         challenging
-          ? "flex w-full items-center gap-2.5 rounded-md border border-warn/40 bg-surface px-3 py-2"
+          ? "flex w-full items-center gap-2.5 rounded-[3px] border border-brass/50 bg-enamel px-3 py-2"
           : "flex items-center gap-2"
       }
     >
-      <ShieldAlert className={challenging ? "size-4 shrink-0 text-warn" : "hidden"} />
+      <ShieldAlert className={challenging ? "size-4 shrink-0 text-brass-lit" : "hidden"} />
       <span
         aria-live="polite"
         className={
-          challenging ? "text-[13px] text-fg-muted" : "font-mono text-[11px] text-fg-faint"
+          challenging
+            ? "text-[13px] text-ink"
+            : "font-mono text-[10px] uppercase tracking-[0.11em] text-on-enamel"
         }
       >
         {challenging ? "One quick check first" : solved ? "verified" : "verifying…"}

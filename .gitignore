@@ -30,3 +30,9 @@ dist-ssr
 # Playwright MCP scratch output
 .playwright-mcp/
 *.png
+
+# Impeccable: per-machine build path (this machine has no image generation)
+.impeccable/config.local.json
+
+# Impeccable: session decision-page logs
+.impeccable/questions/

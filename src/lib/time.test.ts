@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { relativeTime } from "./time";
+import { dateStamp, relativeTime } from "./time";
 
 const now = new Date("2026-09-04T12:00:00Z").getTime();
 const ago = (seconds: number) => new Date(now - seconds * 1000).toISOString();
@@ -23,5 +23,19 @@ describe("relativeTime", () => {
 
   it("returns the raw value for an unparseable timestamp", () => {
     expect(relativeTime("not-a-date", now)).toBe("not-a-date");
+  });
+});
+
+describe("dateStamp", () => {
+  it("pads the day and uppercases the month", () => {
+    expect(dateStamp("2026-09-04T12:00:00Z")).toBe("04 SEP 2026");
+  });
+
+  it("keeps a fixed width for a two-digit day", () => {
+    expect(dateStamp("2026-12-25T00:00:00Z")).toHaveLength("04 SEP 2026".length);
+  });
+
+  it("falls back for an unparseable timestamp", () => {
+    expect(dateStamp("not-a-date")).toBe("——");
   });
 });
