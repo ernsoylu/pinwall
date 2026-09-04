@@ -66,14 +66,24 @@ export function Creator() {
             tag={<span className="text-ink-faint">not issued</span>}
             deposited={dateStamp()}
             keepUntil={
-              <input
-                type="date"
-                aria-label="Keep until"
-                min={new Date().toLocaleDateString("en-CA")}
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
-                className="w-[9.5rem] cursor-pointer bg-transparent text-ink-muted outline-none"
-              />
+              <span className="relative inline-flex">
+                {!expiry && (
+                  <span className="pointer-events-none absolute left-0 text-ink-muted">
+                    infinite
+                  </span>
+                )}
+                <input
+                  type="date"
+                  aria-label="Keep until"
+                  min={new Date().toLocaleDateString("en-CA")}
+                  value={expiry}
+                  onChange={(e) => setExpiry(e.target.value)}
+                  className={
+                    "w-[7.25rem] min-w-0 cursor-pointer bg-transparent outline-none " +
+                    (expiry ? "text-ink-muted" : "text-transparent")
+                  }
+                />
+              </span>
             }
             seal={
               isPrivate ? (
