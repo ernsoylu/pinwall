@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { highlight } from "../lib/highlight";
 import { Markdown } from "./Markdown";
 
@@ -32,6 +32,7 @@ export function CodeEditor({
   const [preview, setPreview] = useState(false);
   const back = useRef<HTMLDivElement>(null);
   const front = useRef<HTMLTextAreaElement>(null);
+  const rail = useRef<HTMLDivElement>(null);
   // Escape releases the next Tab to the browser, so keyboard users are never
   // trapped in the textarea by the indent handler below.
   const releaseTab = useRef(false);
@@ -49,7 +50,24 @@ export function CodeEditor({
     };
   }, [value, language]);
 
-  const layer = "p-4 font-mono text-[12.5px]/[1.6] whitespace-pre";
+  const lineCount = useMemo(() => value.split("\n").length, [value]);
+  const numbers = useMemo(
+    // One text node rather than a div per line: a 256 KB pin is ~10k lines, and
+    // whitespace-pre at the shared metrics keeps each number on its own row.
+    () => Array.from({ length: lineCount }, (_, i) => i + 1).join("\n"),
+    [lineCount],
+  );
+
+  // The rail and both text layers are sized from one expression, because the
+  // three only line up while they agree on where the gutter ends.
+  const digits = String(lineCount).length;
+  const railWidth = `calc(${digits}ch + 1.5rem)`;
+  const textInset = `calc(${digits}ch + 2.25rem)`;
+
+  // Shared so the highlighted layer, the textarea and the rail cannot drift out
+  // of step — identical metrics are what keeps the glyphs on top of each other.
+  const metrics = "font-mono text-[12.5px]/[1.6]";
+  const layer = `py-4 pr-4 ${metrics} whitespace-pre`;
 
   return (
     <div className="stock flex min-h-0 flex-1 flex-col">
@@ -77,6 +95,7 @@ export function CodeEditor({
           <div
             ref={back}
             aria-hidden
+            style={{ paddingLeft: textInset }}
             className={`pointer-events-none absolute inset-0 overflow-hidden !bg-transparent ${layer} [&_code]:font-inherit [&_pre]:m-0 [&_pre]:!bg-transparent [&_pre]:p-0`}
             dangerouslySetInnerHTML={{ __html: html ?? "" }}
           />
@@ -96,20 +115,40 @@ export function CodeEditor({
           }
           releaseTab.current = false;
         }}
-        onScroll={() => {
+            onScroll={() => {
               if (!back.current || !front.current) return;
               back.current.scrollTop = front.current.scrollTop;
               back.current.scrollLeft = front.current.scrollLeft;
+              // The rail follows vertically only: numbers stay put while a long
+              // line scrolls sideways underneath them.
+              if (rail.current) rail.current.scrollTop = front.current.scrollTop;
             }}
             wrap="off"
             spellCheck={false}
             autoFocus={autoFocus}
             aria-label={label}
             placeholder={placeholder}
+            style={{ paddingLeft: textInset }}
             className={`absolute inset-0 resize-none overflow-auto !bg-transparent caret-brass-lit outline-none placeholder:text-on-enamel focus-visible:outline-none ${layer} ${
               html ? "text-transparent" : "text-ink"
             }`}
           />
+          {/*
+           * Last, so it paints over both text layers: a long line scrolling
+           * sideways passes behind the numbers rather than through them. It is
+           * aria-hidden and unselectable, so copying the pin never picks up a
+           * line number, and pointer-events-none keeps every click on the
+           * textarea underneath.
+           */}
+          <div
+            ref={rail}
+            aria-hidden
+            data-testid="line-numbers"
+            style={{ width: railWidth }}
+            className={`pointer-events-none absolute inset-y-0 left-0 select-none overflow-hidden border-r border-ink/[0.07] bg-enamel-deep px-3 py-4 text-right text-ink-faint ${metrics} whitespace-pre`}
+          >
+            {numbers}
+          </div>
         </div>
       )}
     </div>

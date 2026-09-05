@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { CodeEditor } from "./CodeEditor";
@@ -56,5 +56,37 @@ describe("CodeEditor tab handling", () => {
 
     expect(onChange).not.toHaveBeenCalled();
     expect(document.activeElement).not.toBe(area);
+  });
+});
+
+describe("CodeEditor line numbers", () => {
+  const rail = () => document.querySelector('[data-testid="line-numbers"]') as HTMLElement;
+
+  it("numbers every line, and only the lines that exist", () => {
+    setup("a\nb\nc");
+    expect(rail().textContent).toBe("1\n2\n3");
+  });
+
+  it("counts the trailing blank line a final newline creates", () => {
+    setup("a\n");
+    expect(rail().textContent).toBe("1\n2");
+  });
+
+  // The rail sits over the text layers, so it must stay out of the accessibility
+  // tree and out of any selection — a copied pin that carried "1 2 3" would be
+  // corrupt, and pasting it back is the obvious way someone would notice.
+  it("stays unselectable and hidden from assistive tech", () => {
+    setup("a\nb");
+    expect(rail()).toHaveAttribute("aria-hidden", "true");
+    expect(rail().className).toContain("select-none");
+    expect(rail().className).toContain("pointer-events-none");
+  });
+
+  it("widens for line counts that need more digits", () => {
+    setup("x");
+    expect(rail().style.width).toContain("1ch");
+    cleanup();
+    setup(Array.from({ length: 120 }, (_, i) => i).join("\n"));
+    expect(rail().style.width).toContain("3ch");
   });
 });
