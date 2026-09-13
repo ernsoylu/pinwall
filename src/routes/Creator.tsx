@@ -1,5 +1,5 @@
 import { CalendarDays, Code2, KeyRound } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "../components/Button";
 import { CodeEditor } from "../components/CodeEditor";
 import { LabelGrid, Shell } from "../components/Shell";
@@ -8,11 +8,13 @@ import { ShareModal } from "./ShareModal";
 import { createPin } from "../lib/api";
 import { encrypt } from "../lib/crypto";
 import { LANGUAGES } from "../lib/highlight";
+import { detectLanguage } from "../lib/detect-language";
 import { dateStamp } from "../lib/time";
 
 export function Creator() {
   const [body, setBody] = useState("");
-  const [language, setLanguage] = useState("typescript");
+  const [selection, setSelection] = useState("auto");
+  const language = useMemo(() => selection === "auto" ? detectLanguage(body) : selection, [body, selection]);
   const [expiry, setExpiry] = useState("");
   const [isPrivate, setPrivate] = useState(false);
   const [passphrase, setPassphrase] = useState("");
@@ -121,10 +123,11 @@ export function Creator() {
             </span>
             <span className="sr-only">Language</span>
             <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              value={selection}
+              onChange={(e) => setSelection(e.target.value)}
               className="picker cursor-pointer rounded-[2px] bg-transparent py-1 font-mono text-[12px] font-medium text-ink outline-none"
             >
+              <option value="auto" className="bg-enamel-deep">Auto ({language})</option>
               {LANGUAGES.map((l) => (
                 <option key={l} value={l} className="bg-enamel-deep">
                   {l}
