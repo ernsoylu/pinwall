@@ -76,6 +76,7 @@ test("the app is served with a CSP that keeps Turnstile working", async () => {
   const response = await worker.fetch(new Request("https://pw.pee.pw/abc1234"), { ASSETS: assets });
   const csp = response.headers.get("content-security-policy");
   assert.match(csp, /script-src 'self' https:\/\/challenges\.cloudflare\.com/);
+  assert.ok(csp.includes("connect-src 'self' https://base.pee.pw "));
   assert.match(csp, /frame-ancestors 'none'/);
   assert.match(csp, /object-src 'none'/);
   assert.equal(response.headers.get("referrer-policy"), "no-referrer");

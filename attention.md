@@ -26,7 +26,7 @@ Three allowances there are load-bearing and easy to delete by accident:
   script plus an iframe; drop either and creation dies.
 - `style-src` needs `'unsafe-inline'`. Shiki colours every token with a `style`
   attribute, so removing it unstyles the editor and both code views.
-- `connect-src` needs `https://*.supabase.co`. Every read and create goes there.
+- `connect-src` needs `https://base.pee.pw`. Every read and create goes there.
 
 `worker/index.test.js` asserts the directives that matter. If you add a CDN,
 font host, or analytics beacon, the CSP is the thing that will refuse it — that

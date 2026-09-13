@@ -35,20 +35,25 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
-      - name: Deploy database and Edge Functions
+      - name: Deploy database and Edge Functions over SSH
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
-          EDGE_PROXY_SECRET: ${{ secrets.EDGE_PROXY_SECRET }}
-          RATE_LIMIT_SALT: ${{ secrets.RATE_LIMIT_SALT }}
+          SUPABASE_SSH_HOST: ${{ vars.SUPABASE_SSH_HOST }}
+          SUPABASE_SSH_KEY: ${{ secrets.SUPABASE_SSH_KEY }}
+          SUPABASE_SSH_KNOWN_HOSTS: ${{ secrets.SUPABASE_SSH_KNOWN_HOSTS }}
         run: |
-          ./node_modules/.bin/supabase link --project-ref "$PROJECT_REF"
-          ./node_modules/.bin/supabase secrets set EDGE_PROXY_SECRET="$EDGE_PROXY_SECRET" RATE_LIMIT_SALT="$RATE_LIMIT_SALT" --project-ref "$PROJECT_REF"
-          ./node_modules/.bin/supabase db push --linked
-          ./node_modules/.bin/supabase functions deploy create-pin --project-ref "$PROJECT_REF" --no-verify-jwt
-          ./node_modules/.bin/supabase functions deploy create-pin-cli --project-ref "$PROJECT_REF" --no-verify-jwt
-          ./node_modules/.bin/supabase functions deploy pin --project-ref "$PROJECT_REF" --no-verify-jwt
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SUPABASE_SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SUPABASE_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -o BatchMode=yes "root@$SUPABASE_SSH_HOST" 'mkdir -p /root/pinwall-deploy'
+          tar czf - supabase/functions supabase/migrations scripts/deploy-supabase.sh |
+            ssh -o BatchMode=yes "root@$SUPABASE_SSH_HOST" 'tar xzf - -C /root/pinwall-deploy'
+          ssh -o BatchMode=yes "root@$SUPABASE_SSH_HOST" 'bash /root/pinwall-deploy/scripts/deploy-supabase.sh'
+      - name: Check backend permissions and function protection
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: python3 scripts/check-supabase.py
       - name: Deploy site and API Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

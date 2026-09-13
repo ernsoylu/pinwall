@@ -20,7 +20,7 @@ pw CLI ── /api, /r ─────┘          │
   retained and the Worker runs on the `pw.pee.pw/*` route.
 - **Supabase Edge Functions** are the only write boundary. `create-pin` verifies Turnstile for the
   browser, `create-pin-cli` applies an IP-based rate limit for POSIX clients, and `pin` handles CLI
-  reads and token-authorized amendments. All three deploy `--no-verify-jwt`, so `create-pin-cli`
+  reads and token-authorized amendments. All three run with JWT verification disabled, so `create-pin-cli`
   accepts the Worker only: it keys its limit on the IP the Worker vouches for with
   `EDGE_PROXY_SECRET`, and refuses anything arriving without it rather than trusting a header the
   caller supplied.
@@ -30,7 +30,7 @@ pw CLI ── /api, /r ─────┘          │
 - **Clients own encryption.** The browser and `pw` encrypt and decrypt private pins locally. The
   passphrase is never sent to Cloudflare, Supabase, or PostgreSQL.
 - **GitHub Actions** runs the browser, Worker, Edge Function, installer, and Go checks. Merges to
-  `main` deploy Supabase and the Worker; version tags build signed-by-checksum release archives and
+  `main` deploy the self-hosted Supabase backend over SSH and the Worker; version tags build signed-by-checksum release archives and
   mint the installer pin whose URL that release's notes carry.
 
 ## CLI
@@ -147,6 +147,14 @@ production entirely.
 `supabase/functions/create-pin` is the Turnstile-gated browser insert;
 `create-pin-cli` is the rate-limited CLI insert, and `pin` serves CLI reads and amendments.
 
-Production deployment also needs repository variables `SUPABASE_PROJECT_REF` and
-`SUPABASE_FUNCTIONS_URL`, plus secrets `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`,
-`EDGE_PROXY_SECRET`, `RATE_LIMIT_SALT`, `CLOUDFLARE_API_TOKEN`, and `CLOUDFLARE_ACCOUNT_ID`.
+Production Supabase runs at `https://base.pee.pw` in `/root/supabase-project`.
+Set `VITE_SUPABASE_URL` to that URL and `SUPABASE_FUNCTIONS_URL` to
+`https://base.pee.pw/functions/v1`; use the server's public key for
+`VITE_SUPABASE_PUBLISHABLE_KEY`.
+
+GitHub Actions uses `SUPABASE_SSH_HOST`, secrets `SUPABASE_SSH_KEY` and
+`SUPABASE_SSH_KNOWN_HOSTS`, and the existing Cloudflare credentials and
+`EDGE_PROXY_SECRET`. The server's functions use `.env.pinwall` for
+`TURNSTILE_SECRET_KEY`, `EDGE_PROXY_SECRET`, and `RATE_LIMIT_SALT`.
+`scripts/deploy-supabase.sh` backs up the database in `/root/pinwall-backups`,
+applies pending migrations, and restarts the Edge Functions runtime.

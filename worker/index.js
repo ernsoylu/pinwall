@@ -18,7 +18,7 @@ export const SECURITY_HEADERS = {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'self' https://*.supabase.co https://challenges.cloudflare.com",
+    "connect-src 'self' https://base.pee.pw https://challenges.cloudflare.com",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
