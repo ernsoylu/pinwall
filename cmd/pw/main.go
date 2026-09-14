@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"text/tabwriter"
 	"time"
 )
 
@@ -36,6 +35,7 @@ type options struct {
 	output                        string
 	url, editURL, json            bool
 	quiet, noSave, help, explicit bool
+	plain                         bool
 	args                          []string
 }
 
@@ -172,6 +172,10 @@ func parseOptions(args []string) (options, error) {
 			o.noSave = true
 		case "--quiet", "-q":
 			o.quiet = true
+		case "--plain", "--stdout":
+			// --stdout is the same switch by the name a pipe-minded user reaches
+			// for: plain, unstyled text, exactly what a redirect already gets.
+			o.plain = true
 		case "--help", "-h":
 			o.help = true
 		default:
@@ -412,7 +416,6 @@ func infoPin(target string, o options, stdout, stderr io.Writer) int {
 		}
 		return emitJSON(out, stdout, stderr)
 	}
-	w := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
 	expires := p.ExpiresAt
 	if expires == "" {
 		expires = "never"
@@ -421,12 +424,20 @@ func infoPin(target string, o options, stdout, stderr io.Writer) int {
 	if p.Ciphertext != "" {
 		encrypted = "yes (AES-256-GCM)"
 	}
-	fmt.Fprintf(w, "tag\t%s\nurl\t%s\nlanguage\t%s\ncreated\t%s\nexpires\t%s\nsize\t%d bytes\nencrypted\t%s\n",
-		p.ID, share, p.Language, p.CreatedAt, expires, size, encrypted)
-	if known {
-		fmt.Fprintf(w, "edit url\t%s\n", record.EditURL)
+	st := styler(stdout, o.plain)
+	field := func(name, value string) {
+		fmt.Fprintf(stdout, "%s  %s\n", st.label(st.column(name, 9)), value)
 	}
-	_ = w.Flush()
+	field("tag", st.bold(p.ID))
+	field("url", st.link(share))
+	field("language", p.Language)
+	field("created", p.CreatedAt)
+	field("expires", expires)
+	field("size", fmt.Sprintf("%d bytes", size))
+	field("encrypted", encrypted)
+	if known {
+		field("edit url", st.link(record.EditURL))
+	}
 	if !known && !o.quiet {
 		fmt.Fprintln(stderr, "pw: no saved edit token for this pin — see pw help editing")
 	}
@@ -452,16 +463,27 @@ func listPins(o options, stdout, stderr io.Writer) int {
 		}
 		return 0
 	}
-	w := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "TAG\tLANGUAGE\tCREATED\tEDIT URL")
+	rows := make([][]string, 0, len(list))
 	for _, s := range list {
 		language := s.Language
 		if s.Encrypted {
 			language += " (encrypted)"
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", s.Tag, language, s.Created, s.EditURL)
+		rows = append(rows, []string{s.Tag, language, s.Created, s.EditURL})
 	}
-	_ = w.Flush()
+	st := styler(stdout, o.plain)
+	st.table(stdout, []string{"TAG", "LANGUAGE", "CREATED", "EDIT URL"}, rows,
+		func(column int, cell string) string {
+			switch column {
+			case 0:
+				return st.bold(cell)
+			case 2:
+				return st.dim(cell)
+			case 3:
+				return st.link(cell)
+			}
+			return cell
+		})
 	return 0
 }
 
@@ -659,6 +681,12 @@ func printCreated(p pin, o options, encrypted bool, stdout, stderr io.Writer) in
 		}, stdout, stderr)
 	}
 	switch {
+	// Both flags: share url first, edit url second, so a script can read one
+	// line each and a person gets the link they hand out next to the one they
+	// keep.
+	case o.url && o.editURL:
+		fmt.Fprintln(stdout, share)
+		fmt.Fprintln(stdout, edit)
 	case o.editURL:
 		fmt.Fprintln(stdout, edit)
 	case o.url:
@@ -668,9 +696,12 @@ func printCreated(p pin, o options, encrypted bool, stdout, stderr io.Writer) in
 		// The token is shown exactly once. On a terminal, say so rather than
 		// letting it scroll past as a bare tag; pipelines never see this.
 		if !o.quiet && isTerminal(stderr) {
-			fmt.Fprintf(stderr, "pw: edit url %s\n", edit)
+			st := styler(stderr, o.plain)
+			fmt.Fprintf(stderr, "%s  %s\n", st.label("url     "), st.link(share))
+			fmt.Fprintf(stderr, "%s  %s\n", st.label("edit url"), st.link(edit))
 			if stored {
-				fmt.Fprintf(stderr, "pw: token saved — amend later with: pw amend %s\n", p.ID)
+				fmt.Fprintf(stderr, "%s  %s\n", st.label("saved   "),
+					"amend later with "+st.accent("pw amend "+p.ID))
 			}
 		}
 	}

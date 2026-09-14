@@ -50,9 +50,11 @@ options:
   --pass-file PATH   take the passphrase from a file
   --url              print the share URL instead of the tag
   --edit-url         print the edit URL (share URL + #EDIT_TOKEN)
+  --url --edit-url   print both, share URL first, one per line
   --json             print {"tag","url","edit_url"} as JSON
   --no-save          do not save the edit token locally
-  -q, --quiet        suppress the edit-url note on stderr
+  --plain, --stdout  plain unstyled output (implied when piping)
+  -q, --quiet        suppress the url note on stderr
 
 examples:
   cat DESIGN.md | pw write --edit-url
@@ -85,6 +87,7 @@ is saved locally.
 
 options:
   --json             print the metadata as JSON
+  --plain, --stdout  plain unstyled output (implied when piping)
   -q, --quiet        suppress notes on stderr`},
 
 	{"list", "List pins saved on this machine", `usage: pw list [options]
@@ -96,7 +99,8 @@ server, and pins created elsewhere never appear.
 options:
   --json             print the saved records as JSON
   --url              print only the share URLs
-  --edit-url         print only the edit URLs`},
+  --edit-url         print only the edit URLs
+  --plain, --stdout  plain unstyled output (implied when piping)`},
 
 	{"forget", "Remove a saved edit token", `usage: pw forget TAG
 
@@ -182,13 +186,21 @@ extensions and stdin default to text.`},
 
   TAG=$(pw write < notes.md)
 
-  --url        https://pw.pee.pw/TAG
-  --edit-url   https://pw.pee.pw/TAG#EDIT_TOKEN
-  --json       {"tag":"…","url":"…","edit_url":"…"}
+  --url              https://pw.pee.pw/TAG
+  --edit-url         https://pw.pee.pw/TAG#EDIT_TOKEN
+  --url --edit-url   both, share URL on the first line
+  --json             {"tag":"…","url":"…","edit_url":"…"}
+
+  { read -r url; read -r edit; } < <(pw write --url --edit-url < notes.md)
+
+Tables and notes are lightly styled on a terminal only: pw dims labels and
+underlines links when stdout is a tty, and prints plain text whenever output is
+piped, redirected, captured, or --plain / --stdout is given. NO_COLOR and
+TERM=dumb are honoured.
 
 read writes the raw bytes to stdout, or to --output PATH. Errors and notes go
 to stderr, so stdout stays clean enough to pipe into a shell. On a terminal,
-write also notes the edit URL on stderr; -q or --quiet silences it.`},
+write also notes both URLs on stderr; -q or --quiet silences them.`},
 
 	{"exit-codes", "What each exit status means", `  0  success
   1  network, server or local I/O failure
@@ -200,7 +212,8 @@ write also notes the edit URL on stderr; -q or --quiet silences it.`},
 	{"env", "Environment variables", `  PW_BASE_URL    server to talk to (default https://pw.pee.pw)
   PW_STATE_FILE  path of the saved-token file
   XDG_STATE_HOME base directory for the default state file
-  NO_COLOR       honoured: pw never colours output anyway`},
+  NO_COLOR       set to anything to disable styling (same as --plain)
+  TERM           "dumb" disables styling too`},
 }
 
 func rootHelp() string {
