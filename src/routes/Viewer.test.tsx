@@ -31,6 +31,18 @@ describe("Viewer", () => {
     expect(screen.queryByLabelText("Passphrase")).not.toBeInTheDocument();
   });
 
+  it("opens the curl-accessible raw endpoint for a public pin", async () => {
+    getPin.mockResolvedValue({ ...basePin, content: "hello world", ciphertext: null, iv: null });
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    try {
+      render(<Viewer id="abc1234" editToken="secret-edit-token" />);
+      await userEvent.click(await screen.findByRole("button", { name: "Raw" }));
+      expect(open).toHaveBeenCalledExactlyOnceWith("/r/abc1234", "_blank", "noopener,noreferrer");
+    } finally {
+      open.mockRestore();
+    }
+  });
+
   it("decrypts a private pin in the browser with the right passphrase", async () => {
     const { ciphertext, iv } = await encrypt("classified", "correct horse");
     getPin.mockResolvedValue({ ...basePin, content: null, ciphertext, iv });
