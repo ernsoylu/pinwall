@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -383,5 +384,45 @@ func TestHelpMenusAndSubmenus(t *testing.T) {
 				t.Errorf("help %s: code=%d", tp.name, code)
 			}
 		}
+	}
+}
+
+// --url and --edit-url together: the link to hand out, then the one to keep.
+func TestWritePrintsBothURLs(t *testing.T) {
+	base := withServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		_, _ = io.WriteString(w, `{"id":"abc1234","edit_token":"token"}`)
+	})
+	var out, errOut bytes.Buffer
+	code := run([]string{"write", "--url", "--edit-url"}, strings.NewReader("x"), &out, &errOut)
+	want := base + "/abc1234\n" + base + "/abc1234#token\n"
+	if code != 0 || out.String() != want {
+		t.Fatalf("code=%d out=%q want %q", code, out.String(), want)
+	}
+}
+
+// Colour must never reach a pipe, and padding must be computed before the
+// escape codes go on — otherwise styled tables drift out of alignment.
+func TestStylingIsTerminalOnlyAndAligns(t *testing.T) {
+	var out bytes.Buffer
+	if styler(&out, false).on {
+		t.Fatal("styled a non-terminal writer")
+	}
+	if styler(os.Stdout, true).on {
+		t.Fatal("--plain did not disable styling")
+	}
+	plain := style{}
+	plain.table(&out, []string{"TAG", "URL"}, [][]string{{"abc1234", "u"}, {"xy", "v"}}, nil)
+	want := "TAG      URL\nabc1234  u\nxy       v\n"
+	if out.String() != want {
+		t.Fatalf("plain table %q want %q", out.String(), want)
+	}
+	out.Reset()
+	colour := style{on: true}
+	colour.table(&out, []string{"TAG", "URL"}, [][]string{{"abc1234", "u"}, {"xy", "v"}},
+		func(_ int, cell string) string { return colour.bold(cell) })
+	stripped := regexp.MustCompile(`\x1b\[[0-9;]*m`).ReplaceAllString(out.String(), "")
+	if stripped != want {
+		t.Fatalf("styled table strips to %q want %q", stripped, want)
 	}
 }

@@ -57,7 +57,9 @@ pw update
 ```
 
 `pw help` lists every command and topic; `pw help write`, `pw help encryption` and
-`pw COMMAND --help` open the detail pages.
+`pw COMMAND --help` open the detail pages. On a terminal, `pw write` notes both the share URL and
+the edit URL on stderr, and tables are lightly styled; piping, redirecting, `--plain`/`--stdout`,
+`NO_COLOR` or `TERM=dumb` all give plain text instead.
 
 The server shows a pin's edit token exactly once, at creation, so `pw write` saves it to
 `$XDG_STATE_HOME/pw/pins.json` (0600) and `pw amend TAG` reuses it — `--no-save` opts out,
