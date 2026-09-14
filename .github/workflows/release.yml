@@ -22,7 +22,8 @@ jobs:
           # nothing to keep in sync. Runs before the publish: if pw.pee.pw is
           # unreachable the release stops here rather than shipping notes with
           # an install command that does not work.
-          tag=$(go run ./cmd/pw write < install.sh)
+          # --no-save: the runner must not keep the edit token on disk.
+          tag=$(go run ./cmd/pw write --no-save < install.sh)
           url="https://pw.pee.pw/r/$tag"
           curl -fsSL --proto '=https' --proto-redir '=https' "$url" | cmp - install.sh
           echo "PW_INSTALL_URL=$url" >> "$GITHUB_ENV"
