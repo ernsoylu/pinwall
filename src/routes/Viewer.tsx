@@ -157,6 +157,10 @@ function Ready({
                 aria-label="Raw"
                 title="Raw"
                 onClick={() => {
+                  if (!pin.ciphertext) {
+                    window.open(`/r/${pin.id}`, "_blank", "noopener,noreferrer");
+                    return;
+                  }
                   const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
                   window.open(url, "_blank");
                   // For an unsealed pin this URL holds the decrypted text, so it
