@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -15,6 +17,8 @@ func withServer(t *testing.T, handler http.HandlerFunc) string {
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 	t.Setenv("PW_BASE_URL", srv.URL)
+	// Never touch the developer's own saved tokens while testing.
+	t.Setenv("PW_STATE_FILE", filepath.Join(t.TempDir(), "pins.json"))
 	return srv.URL
 }
 
@@ -215,6 +219,169 @@ func TestNewIDCoversTheAlphabetUnbiased(t *testing.T) {
 	for c, n := range seen {
 		if n < expected/2 || n > expected*2 {
 			t.Fatalf("letter %q appeared %d times, expected near %d", c, n, expected)
+		}
+	}
+}
+
+// The whole point of the store: a plain `pw write` keeps the one-shot edit
+// token, so `pw amend TAG` works later without the user having saved it.
+func TestSavedTokenPowersAmendListAndForget(t *testing.T) {
+	stored := "first"
+	withServer(t, func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		switch r.Method {
+		case "POST":
+			w.WriteHeader(http.StatusCreated)
+			_, _ = io.WriteString(w, `{"id":"abc1234","edit_token":"token"}`)
+		case "PATCH":
+			if body["edit_token"] != "token" {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			stored = body["content"].(string)
+			_, _ = io.WriteString(w, `{"id":"abc1234"}`)
+		}
+	})
+	var out, errOut bytes.Buffer
+	if code := run([]string{"write"}, strings.NewReader("first"), &out, &errOut); code != 0 {
+		t.Fatalf("write code %d: %s", code, errOut.String())
+	}
+	out.Reset()
+	if code := run([]string{"amend", "abc1234"}, strings.NewReader("second"), &out, &errOut); code != 0 {
+		t.Fatalf("amend without token: code %d: %s", code, errOut.String())
+	}
+	if stored != "second" {
+		t.Fatalf("server stored %q", stored)
+	}
+	out.Reset()
+	if code := run([]string{"list"}, strings.NewReader(""), &out, &errOut); code != 0 ||
+		!strings.Contains(out.String(), "abc1234") || !strings.Contains(out.String(), "#token") {
+		t.Fatalf("list out=%q", out.String())
+	}
+	out.Reset()
+	if code := run([]string{"forget", "abc1234"}, strings.NewReader(""), &out, &errOut); code != 0 {
+		t.Fatalf("forget code %d", code)
+	}
+	if code := run([]string{"amend", "abc1234"}, strings.NewReader("third"), &out, &errOut); code != 2 {
+		t.Fatalf("amend after forget code %d", code)
+	}
+	if stored != "second" {
+		t.Fatalf("forgotten pin was still amended: %q", stored)
+	}
+	// --no-save must leave nothing behind.
+	if code := run([]string{"write", "--no-save"}, strings.NewReader("x"), &out, &errOut); code != 0 {
+		t.Fatal(errOut.String())
+	}
+	if _, ok := savedPin("abc1234"); ok {
+		t.Fatal("--no-save still saved the token")
+	}
+}
+
+func TestWriteFromFilePicksLanguageAndAliases(t *testing.T) {
+	var seen string
+	withServer(t, func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		seen, _ = body["language"].(string)
+		w.WriteHeader(http.StatusCreated)
+		_, _ = io.WriteString(w, `{"id":"abc1234","edit_token":"token"}`)
+	})
+	file := filepath.Join(t.TempDir(), "notes.md")
+	if err := os.WriteFile(file, []byte("# hi\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var out, errOut bytes.Buffer
+	if code := run([]string{"write", file}, strings.NewReader(""), &out, &errOut); code != 0 || seen != "markdown" {
+		t.Fatalf("file write code=%d language=%q err=%q", code, seen, errOut.String())
+	}
+	if code := run([]string{"write", file, "-l", "shell"}, strings.NewReader(""), &out, &errOut); code != 0 || seen != "bash" {
+		t.Fatalf("alias language=%q", seen)
+	}
+	if code := run([]string{"write"}, strings.NewReader("plain"), &out, &errOut); code != 0 || seen != "text" {
+		t.Fatalf("stdin default language=%q", seen)
+	}
+}
+
+func TestInfoOutputFileAndPassphraseSources(t *testing.T) {
+	sealed, iv, err := encrypt([]byte("secret"), "hunter2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	withServer(t, func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"id": "abc1234", "ciphertext": sealed, "iv": iv,
+			"language": "markdown", "created_at": "2026-09-13T18:02:22Z",
+		})
+	})
+	var out, errOut bytes.Buffer
+	if code := run([]string{"info", "abc1234"}, strings.NewReader(""), &out, &errOut); code != 0 {
+		t.Fatalf("info code %d: %s", code, errOut.String())
+	}
+	for _, want := range []string{"abc1234", "markdown", "never", "yes"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("info missing %q in %q", want, out.String())
+		}
+	}
+	pass := filepath.Join(t.TempDir(), "pass")
+	if err := os.WriteFile(pass, []byte("hunter2\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "out.txt")
+	out.Reset()
+	code := run([]string{"read", "abc1234", "--pass-file", pass, "-o", target}, strings.NewReader(""), &out, &errOut)
+	if code != 0 || out.Len() != 0 {
+		t.Fatalf("read -o code=%d out=%q err=%q", code, out.String(), errOut.String())
+	}
+	if b, err := os.ReadFile(target); err != nil || string(b) != "secret" {
+		t.Fatalf("output file %q %v", b, err)
+	}
+	t.Setenv("PW_PASS", "hunter2")
+	out.Reset()
+	if code := run([]string{"abc1234", "--pass-env", "PW_PASS"}, strings.NewReader(""), &out, &errOut); code != 0 || out.String() != "secret" {
+		t.Fatalf("--pass-env out=%q", out.String())
+	}
+	out.Reset()
+	if code := run([]string{"abc1234", "--pass-env", "PW_MISSING"}, strings.NewReader(""), &out, &errOut); code != 2 {
+		t.Fatalf("missing env var code %d", code)
+	}
+}
+
+func TestHelpMenusAndSubmenus(t *testing.T) {
+	var out, errOut bytes.Buffer
+	if code := run([]string{"help"}, strings.NewReader(""), &out, &errOut); code != 0 {
+		t.Fatalf("help code %d", code)
+	}
+	for _, want := range []string{"commands:", "help topics:", "amend", "encryption"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("root help missing %q", want)
+		}
+	}
+	for _, args := range [][]string{{"help", "write"}, {"write", "--help"}, {"write", "-h"}} {
+		out.Reset()
+		if code := run(args, strings.NewReader(""), &out, &errOut); code != 0 ||
+			!strings.Contains(out.String(), "--edit-url") {
+			t.Fatalf("%v: code=%d out=%q", args, code, out.String())
+		}
+	}
+	out.Reset()
+	if code := run([]string{"help", "editing"}, strings.NewReader(""), &out, &errOut); code != 0 ||
+		!strings.Contains(out.String(), "pins.json") {
+		t.Fatalf("topic help out=%q", out.String())
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := run([]string{"help", "nonsense"}, strings.NewReader(""), &out, &errOut); code != 2 ||
+		!strings.Contains(errOut.String(), "available:") {
+		t.Fatalf("unknown topic code=%d err=%q", code, errOut.String())
+	}
+	// Every command and topic advertised by the root menu must resolve.
+	for _, list := range [][]topic{commands, topics} {
+		for _, tp := range list {
+			out.Reset()
+			if code := run([]string{"help", tp.name}, strings.NewReader(""), &out, &errOut); code != 0 || out.Len() == 0 {
+				t.Errorf("help %s: code=%d", tp.name, code)
+			}
 		}
 	}
 }

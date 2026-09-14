@@ -44,17 +44,27 @@ curl -fsSL --proto '=https' --proto-redir '=https' https://pw.pee.pw/r/TAG | sh
 
 ```sh
 printf 'hello\n' | pw write
-cat deploy.sh | pw write --language shell --edit-url
+pw write deploy.sh --expires 30d          # language guessed from the extension
+cat DESIGN.md | pw write --edit-url       # print the one-shot edit token
 pw TAG
 pw TAG --pass XXXXXXXXXXXXXXXX
 pw TAG | sh
+pw info TAG                               # language, size, expiry, edit url
+printf 'replacement\n' | pw amend TAG     # uses the saved edit token
 printf 'replacement\n' | pw amend 'TAG#EDIT_TOKEN'
+pw list                                   # pins created on this machine
 pw update
 ```
 
-`pw` keeps diagnostics on stderr, so stdout can be piped safely. `--pass` encrypts writes and
-decrypts reads locally using the browser-compatible format. Command arguments may be visible in
-shell history and process listings.
+`pw help` lists every command and topic; `pw help write`, `pw help encryption` and
+`pw COMMAND --help` open the detail pages.
+
+The server shows a pin's edit token exactly once, at creation, so `pw write` saves it to
+`$XDG_STATE_HOME/pw/pins.json` (0600) and `pw amend TAG` reuses it — `--no-save` opts out,
+`pw forget TAG` drops one record. `pw` keeps diagnostics on stderr, so stdout can be piped safely.
+`--pass` encrypts writes and decrypts reads locally using the browser-compatible format; prefer
+`--pass-env` or `--pass-file` in scripts, since command arguments are visible in shell history and
+process listings.
 
 ### The installer
 
