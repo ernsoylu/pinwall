@@ -3,22 +3,32 @@ import test from "node:test";
 import worker, { SECURITY_HEADERS } from "./index.js";
 import { readFileSync } from "node:fs";
 
-test("/r/TAG returns exact public content", async () => {
+test("/r/TAG returns exact public content with CORS", async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ content: "#!/bin/sh\necho ok\n", ciphertext: null });
   try {
     const response = await worker.fetch(new Request("https://pw.pee.pw/r/abc1234"), {});
     assert.equal(response.headers.get("content-type"), "text/plain; charset=utf-8");
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
     assert.equal(await response.text(), "#!/bin/sh\necho ok\n");
   } finally { globalThis.fetch = original; }
 });
 
-test("/r/TAG refuses encrypted pins", async () => {
+test("/r/TAG answers OPTIONS preflight with CORS headers", async () => {
+  const response = await worker.fetch(new Request("https://pw.pee.pw/r/abc1234", { method: "OPTIONS" }), {});
+  assert.equal(response.status, 204);
+  assert.equal(response.headers.get("access-control-allow-origin"), "*");
+  assert.equal(response.headers.get("access-control-allow-methods"), "GET, HEAD, OPTIONS");
+  assert.equal(response.headers.get("access-control-max-age"), "86400");
+});
+
+test("/r/TAG refuses encrypted pins but includes CORS", async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => Response.json({ ciphertext: "sealed" });
   try {
     const response = await worker.fetch(new Request("https://pw.pee.pw/r/abc1234"), {});
     assert.equal(response.status, 403);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
   } finally { globalThis.fetch = original; }
 });
 
@@ -84,11 +94,13 @@ test("the app is served with a CSP that keeps Turnstile working", async () => {
   assert.equal(await response.text(), "site");
 });
 
-test("raw endpoint preserves upstream failure status", async () => {
+test("raw endpoint preserves upstream failure status and includes CORS", async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => new Response(null, { status: 404 });
   try {
-    assert.equal((await worker.fetch(new Request("https://pw.pee.pw/r/abc1234"), {})).status, 404);
+    const response = await worker.fetch(new Request("https://pw.pee.pw/r/abc1234"), {});
+    assert.equal(response.status, 404);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
   } finally { globalThis.fetch = original; }
 });
 

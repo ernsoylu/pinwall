@@ -60,13 +60,27 @@ export default {
     }
 
     const raw = url.pathname.match(/^\/r\/([A-Za-z0-9_-]{5,7})$/);
+    if (raw && request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "GET, HEAD, OPTIONS",
+          "access-control-max-age": "86400",
+        },
+      });
+    }
     if (raw && (request.method === "GET" || head)) {
       const response = await fetch(`${env.SUPABASE_FUNCTIONS_URL}/pin/${raw[1]}`);
-      if (!response.ok) return new Response(null, { status: response.status });
+      if (!response.ok) return new Response(null, { status: response.status, headers: { "access-control-allow-origin": "*" } });
       const pin = await response.json();
-      if (pin.ciphertext) return new Response(head ? null : "encrypted pin\n", { status: 403 });
+      if (pin.ciphertext) return new Response(head ? null : "encrypted pin\n", { status: 403, headers: { "access-control-allow-origin": "*" } });
       return new Response(head ? null : pin.content, {
-        headers: { "content-type": "text/plain; charset=utf-8", "x-content-type-options": "nosniff" },
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "x-content-type-options": "nosniff",
+          "access-control-allow-origin": "*",
+        },
       });
     }
 
